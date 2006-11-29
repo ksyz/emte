@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.1.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -213,6 +213,9 @@ fi
 %{_datadir}/%{name}
 
 %changelog
+* Wed Nov 29 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-3
+- Rebuild for updated libnetsnmp
+
 * Thu Nov 16 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-2
 - Fix up pt_br
 - Add Req-pre on useradd
