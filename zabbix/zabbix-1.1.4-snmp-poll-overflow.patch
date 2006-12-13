@@ -1,0 +1,11 @@
+--- zabbix/src/zabbix_server/poller/checks_snmp.c~	2006-11-14 12:11:17.000000000 -0600
++++ zabbix/src/zabbix_server/poller/checks_snmp.c	2006-12-01 10:49:26.000000000 -0600
+@@ -405,7 +405,7 @@
+ 				}
+ 				else
+ 				{
+-					p = malloc(16);
++					p = malloc(MAX_STRING_LEN);
+ 					if(p)
+ 					{
+ 						ip = vars->val.string;

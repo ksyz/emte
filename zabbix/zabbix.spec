@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.1.4
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -11,6 +11,7 @@ Source1:        zabbix-web.conf
 Source2:        zabbix-server.init
 Source3:        zabbix-agent.init
 Source4:        zabbix-logrotate.in
+Patch0:         zabbix-1.1.4-snmp-poll-overflow.patch
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %define database mysql
@@ -76,6 +77,7 @@ The php frontend to display the zabbix web interface.
 
 %prep
 %setup -q
+%patch0 -p1 -b .overflow
 
 # fix up some lib64 issues
 %{__perl} -pi.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
@@ -213,6 +215,9 @@ fi
 %{_datadir}/%{name}
 
 %changelog
+* Wed Dec 13 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-4
+- Fix snmp polling buffer overflow (#218065)
+
 * Wed Nov 29 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-3
 - Rebuild for updated libnetsnmp
 
