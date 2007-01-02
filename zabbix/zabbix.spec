@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.1.4
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -70,7 +70,7 @@ The zabbix client agent, to be installed on monitored systems.
 %package web
 Summary:        Zabbix Web Frontend
 Group:          Applications/Internet
-Requires:       php-%{zdb}, php-gd
+Requires:       php-%{zdb}, php-gd, php
 
 %description web
 The php frontend to display the zabbix web interface.
@@ -215,6 +215,9 @@ fi
 %{_datadir}/%{name}
 
 %changelog
+* Tue Jan 02 2007 Jarod Wilson <jwilson@redhat.com> 1.1.4-5
+- Add explicit R:php to zabbix-web (#220676)
+
 * Wed Dec 13 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-4
 - Fix snmp polling buffer overflow (#218065)
 
