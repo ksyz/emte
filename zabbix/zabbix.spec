@@ -1,5 +1,5 @@
 Name:           zabbix
-Version:        1.1.5
+Version:        1.1.6
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -213,6 +213,9 @@ fi
 %{_datadir}/%{name}
 
 %changelog
+* Wed Feb 07 2007 Jarod Wilson <jwilson@redhat.com> 1.1.6-1
+- New upstream release
+
 * Thu Feb 01 2007 Jarod Wilson <jwilson@redhat.com> 1.1.5-1
 - New upstream release
 
