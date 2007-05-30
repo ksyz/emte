@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -114,6 +114,13 @@ mv $RPM_BUILD_ROOT%{_datadir}/%{name}/include/db.inc.php \
     $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/
 ln -s ../../../..%{_sysconfdir}/%{name}/db.inc.php \
     $RPM_BUILD_ROOT%{_datadir}/%{name}/include/db.inc.php
+cat << __EOF__ >> $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix.conf.php
+# This file is a place-holder. When you run through the zabbix
+# web setup, a proper configuration file should be generated
+# for you to drop in this location.
+__EOF__
+ln -s ../../../..%{_sysconfdir}/%{name}/zabbix.conf.php \
+    $RPM_BUILD_ROOT%{_datadir}/%{name}/conf/zabbix.conf.php
 # kill off .htaccess files, options set in SOURCE1
 rm -f $RPM_BUILD_ROOT%{_datadir}/%{name}/include/.htaccess
 rm -f $RPM_BUILD_ROOT%{_datadir}/%{name}/include/classes/.htaccess
@@ -140,14 +147,13 @@ cat %{SOURCE4} | sed -e 's|COMPONENT|agentd|g' > \
 install -m 0755 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix
 install -m 0755 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-agent
 
+# set up config dir
+
 # install
 make DESTDIR=$RPM_BUILD_ROOT install
 
-# nuke static libs and extra COPYING
-rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a $RPM_BUILD_ROOT%{_datadir}/%{name}/conf
-
-# nuke extra COPYING and empty oracle upgrade sql
-rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/conf upgrades/dbpatches/1.4/oracle
+# nuke static libs and empty oracle upgrade sql
+rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a upgrades/dbpatches/1.4/oracle
 
 # nuke erronious executable permissions
 chmod -x src/zabbix_agent/eventlog.c
@@ -220,21 +226,27 @@ fi
 %defattr(-,root,root,-)
 %doc README
 %dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/zabbix.conf.php
 %config(noreplace) %{_sysconfdir}/%{name}/db.inc.php
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
 %dir %{_datadir}/%{name}
 %dir %{_datadir}/%{name}/audio
+%dir %{_datadir}/%{name}/conf
 %dir %{_datadir}/%{name}/images
 %dir %{_datadir}/%{name}/include
 %dir %{_datadir}/%{name}/js
 %{_datadir}/%{name}/*.php
 %{_datadir}/%{name}/css.css
 %{_datadir}/%{name}/audio/*
+%{_datadir}/%{name}/conf/*
 %{_datadir}/%{name}/images/*
 %{_datadir}/%{name}/include/*
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Wed May 30 2007 Jarod Wilson <jwilson@redhat.com> 1.4-2
+- Add placeholder zabbix.conf.php
+
 * Tue May 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-1
 - New upstream release
 
