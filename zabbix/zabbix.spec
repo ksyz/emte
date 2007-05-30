@@ -1,5 +1,5 @@
 Name:           zabbix
-Version:        1.1.7
+Version:        1.4
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -27,6 +27,7 @@ Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:  %{database}-devel, net-snmp-devel
 BuildRequires:  openldap-devel, gnutls-devel
+BuildRequires:  iksemel-devel, curl-devel
 Requires:       logrotate, fping, net-snmp-libs
 Requires(pre):      /usr/sbin/useradd
 Requires(post):     /sbin/chkconfig
@@ -81,23 +82,21 @@ The php frontend to display the zabbix web interface.
 %{__perl} -pi.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
     configure
 
-# fix up pt_br
-%{__chmod} a-x frontends/php/include/locales/pt_br.inc.php
-%{__sed} -i 's/\r//' frontends/php/include/locales/pt_br.inc.php
 
 %build
+#export LIBCURL_LDFLAGS="-I%{_includedir}/curl"
+#export LIBCURL_LIBS="-lcurl"
 %configure \
     --enable-server \
     --enable-agent \
     --with-%{zdb} \
     --with-net-snmp \
     --with-ldap \
-    --disable-static
+    --with-libcurl \
+    --with-jabber
 
-# --disable-static is partially broken atm,
-# -static still gets into CFLAGS, so fix up in make
-# (and even then, .a files still show their face...)
-make %{?_smp_mflags} CFLAGS="$RPM_OPT_FLAGS"
+#make %{?_smp_mflags} CFLAGS="$RPM_OPT_FLAGS"
+make %{?_smp_mflags}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -141,8 +140,18 @@ cat %{SOURCE4} | sed -e 's|COMPONENT|agentd|g' > \
 install -m 0755 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix
 install -m 0755 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-agent
 
+# install
 make DESTDIR=$RPM_BUILD_ROOT install
-rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a
+
+# nuke static libs and extra COPYING
+rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a $RPM_BUILD_ROOT%{_datadir}/%{name}/conf
+
+# nuke extra COPYING and empty oracle upgrade sql
+rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/conf upgrades/dbpatches/1.4/oracle
+
+# nuke erronious executable permissions
+chmod -x src/zabbix_agent/eventlog.c
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -180,8 +189,11 @@ fi
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
-%doc create/data create/%{database}
+%doc docs/*.pdf upgrades/dbpatches
 %dir %{_sysconfdir}/%{name}
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/create
+%{_datadir}/zabbix/create/*
 %{_bindir}/zabbix_server
 %{_sysconfdir}/init.d/zabbix
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix
@@ -210,9 +222,22 @@ fi
 %dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/db.inc.php
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
-%{_datadir}/%{name}
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/audio
+%dir %{_datadir}/%{name}/images
+%dir %{_datadir}/%{name}/include
+%dir %{_datadir}/%{name}/js
+%{_datadir}/%{name}/*.php
+%{_datadir}/%{name}/css.css
+%{_datadir}/%{name}/audio/*
+%{_datadir}/%{name}/images/*
+%{_datadir}/%{name}/include/*
+%{_datadir}/%{name}/js/*
 
 %changelog
+* Tue May 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-1
+- New upstream release
+
 * Fri Mar 30 2007 Jarod Wilson <jwilson@redhat.com> 1.1.7-1
 - New upstream release
 
