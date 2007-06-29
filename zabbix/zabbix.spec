@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -70,13 +70,19 @@ The zabbix client agent, to be installed on monitored systems.
 %package web
 Summary:        Zabbix Web Frontend
 Group:          Applications/Internet
-Requires:       php-%{zdb}, php-gd, php
+Requires:       php, php-%{zdb}, php-gd, php-bcmath
 
 %description web
 The php frontend to display the zabbix web interface.
 
 %prep
 %setup -q
+
+# shuffle sql init files around to fix up install
+mkdir -p dbinit/{schema,data}
+cp create/schema/%{database}.sql dbinit/schema/
+cp create/data/images_%{database}.sql dbinit/data/
+cp create/data/data.sql dbinit/data/
 
 # fix up some lib64 issues
 %{__perl} -pi.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
@@ -154,7 +160,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 
 # nuke static libs and empty oracle upgrade sql
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a upgrades/dbpatches/1.4/oracle
-
+# nuke extraneous sql files
+rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/create
 # nuke erronious executable permissions
 chmod -x src/zabbix_agent/eventlog.c
 
@@ -195,11 +202,8 @@ fi
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
-%doc docs/*.pdf upgrades/dbpatches
+%doc docs/*.pdf upgrades/dbpatches dbinit
 %dir %{_sysconfdir}/%{name}
-%dir %{_datadir}/%{name}
-%dir %{_datadir}/%{name}/create
-%{_datadir}/zabbix/create/*
 %{_bindir}/zabbix_server
 %{_sysconfdir}/init.d/zabbix
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix
@@ -244,6 +248,10 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Fri Jun 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-3
+- Install correct sql init files (#244991)
+- Add Requires: php-bcmath to zabbix-web (#245767)
+
 * Wed May 30 2007 Jarod Wilson <jwilson@redhat.com> 1.4-2
 - Add placeholder zabbix.conf.php
 
