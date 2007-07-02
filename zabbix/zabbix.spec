@@ -1,6 +1,6 @@
 Name:           zabbix
-Version:        1.4
-Release:        3%{?dist}
+Version:        1.4.1
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -248,6 +248,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Mon Jul 02 2007 Jarod Wilson <jwilson@redhat.com> 1.4.1-1
+- New upstream release
+
 * Fri Jun 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-3
 - Install correct sql init files (#244991)
 - Add Requires: php-bcmath to zabbix-web (#245767)
