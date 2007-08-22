@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -204,7 +204,7 @@ fi
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
 %doc docs/*.pdf upgrades/dbpatches dbinit
 %dir %{_sysconfdir}/%{name}
-%{_bindir}/zabbix_server
+%{_sbindir}/zabbix_server
 %{_sysconfdir}/init.d/zabbix
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix
 %config(noreplace) %{_sysconfdir}/%{name}/zabbix_server.conf
@@ -215,10 +215,10 @@ fi
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
 %dir %{_sysconfdir}/%{name}
-%{_bindir}/zabbix_agent
-%{_bindir}/zabbix_agentd
-%{_bindir}/zabbix_sender
-%{_bindir}/zabbix_get
+%{_sbindir}/zabbix_agent
+%{_sbindir}/zabbix_agentd
+%{_sbindir}/zabbix_sender
+%{_sbindir}/zabbix_get
 %{_sysconfdir}/init.d/zabbix-agent
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
 %config(noreplace) %{_sysconfdir}/%{name}/zabbix_agent.conf
@@ -248,6 +248,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Tue Aug 21 2007 Jarod Wilson <jwilson@redhat.com> 1.4.2-2
+- Account for binaries moving from %%_bindir to %%_sbindir
+
 * Tue Aug 21 2007 Jarod Wilson <jwilson@redhat.com> 1.4.2-1
 - New upstream release
 

@@ -5,7 +5,7 @@
 #
 
 # zabbix details
-ZABBIX=/usr/bin/zabbix_server
+ZABBIX=/usr/sbin/zabbix_server
 CONF=/etc/zabbix/zabbix_server.conf
 PIDFILE=/var/run/zabbix.pid
 
