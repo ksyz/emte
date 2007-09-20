@@ -1,0 +1,13 @@
+--- zabbix-1.4.2.orig/include/sysinc.h	2007-08-20 21:22:22.000000000 +0200
++++ zabbix-1.4.2/include/sysinc.h	2007-09-19 11:44:08.000000000 +0200
+@@ -288,7 +288,9 @@
+ 
+ #ifdef HAVE_GETOPT_H
+ #	ifdef HAVE_GETOPT_LONG
+-#		define _GNU_SOURCE
++#		if !defined(_GNU_SOURCE)
++#			define _GNU_SOURCE
++#		endif
+ #		include <getopt.h>
+ #	endif
+ #endif
