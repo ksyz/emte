@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -13,6 +13,7 @@ Source3:        zabbix-agent.init
 Source4:        zabbix-logrotate.in
 Patch0:         zabbix-1.4.2-include.patch
 Patch1:         zabbix-1.4.2-cpustats.patch
+Patch2:         zabbix-1.4.2-initgroups.patch
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %define database mysql
@@ -81,6 +82,7 @@ The php frontend to display the zabbix web interface.
 %setup -q
 %patch0 -p1 -b .include
 %patch1 -p1 -b .cpustats
+%patch2 -p1 -b .initgroups
 
 # shuffle sql init files around to fix up install
 mkdir -p dbinit/{schema,data}
@@ -252,6 +254,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Sat Dec 01 2007 Dan Horak <dan[at]danny.cz> 1.4.2-4
+- add security fix (#407181)
+
 * Thu Sep 20 2007 Dan Horak <dan[at]danny.cz> 1.4.2-3
 - Add a patch to clean a warning during compile
 - Add a patch to fix cpu load computations
