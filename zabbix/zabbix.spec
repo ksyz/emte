@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -254,6 +254,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Thu Dec 06 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.4.2-5
+- Rebuild for deps
+
 * Sat Dec 01 2007 Dan Horak <dan[at]danny.cz> 1.4.2-4
 - add security fix (#407181)
 
