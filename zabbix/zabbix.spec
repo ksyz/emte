@@ -1,6 +1,6 @@
 Name:           zabbix
-Version:        1.4.2
-Release:        5%{?dist}
+Version:        1.4.3
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -11,9 +11,7 @@ Source1:        zabbix-web.conf
 Source2:        zabbix-server.init
 Source3:        zabbix-agent.init
 Source4:        zabbix-logrotate.in
-Patch0:         zabbix-1.4.2-include.patch
-Patch1:         zabbix-1.4.2-cpustats.patch
-Patch2:         zabbix-1.4.2-initgroups.patch
+Patch0:         zabbix-1.4.2-cpustats.patch
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %define database mysql
@@ -80,9 +78,7 @@ The php frontend to display the zabbix web interface.
 
 %prep
 %setup -q
-%patch0 -p1 -b .include
-%patch1 -p1 -b .cpustats
-%patch2 -p1 -b .initgroups
+%patch0 -p1 -b .cpustats
 
 # shuffle sql init files around to fix up install
 mkdir -p dbinit/{schema,data}
@@ -254,6 +250,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Wed Dec 12 2007 Jarod Wilson <jwilson@redhat.com> - 1.4.3-1
+- New upstream release
+
 * Thu Dec 06 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.4.2-5
 - Rebuild for deps
 
