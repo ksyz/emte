@@ -1,5 +1,5 @@
 Name:           zabbix
-Version:        1.4.3
+Version:        1.4.4
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -250,6 +250,10 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Mon Dec 17 2007 Jarod Wilson <jwilson@redhat.com> - 1.4.4-1
+- New upstream release
+- Fixes two crasher bugs in 1.4.3 release
+
 * Wed Dec 12 2007 Jarod Wilson <jwilson@redhat.com> - 1.4.3-1
 - New upstream release
 
