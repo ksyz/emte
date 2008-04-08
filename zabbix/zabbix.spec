@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -83,7 +83,7 @@ The php frontend to display the zabbix web interface.
 # shuffle sql init files around to fix up install
 mkdir -p dbinit/{schema,data}
 cp create/schema/%{database}.sql dbinit/schema/
-cp create/data/images_%{database}.sql dbinit/data/
+cp create/data/images_%{zdb}.sql dbinit/data/
 cp create/data/data.sql dbinit/data/
 
 # fix up some lib64 issues
@@ -250,6 +250,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Tue Apr 08 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-2
+- Fix building w/postgresql (#441456)
+
 * Tue Mar 25 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.4.5-1
 - Update to 1.4.5
 
