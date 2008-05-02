@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.5
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -250,6 +250,11 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Fri May 02 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-3
+- Seems the zabbix folks replaced the original 1.4.5 tarball with
+  an updated tarball or something -- it actually does contain a
+  tiny bit of additional code... So update to newer 1.4.5.
+
 * Tue Apr 08 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-2
 - Fix building w/postgresql (#441456)
 
