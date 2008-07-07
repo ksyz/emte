@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.4.5
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -137,10 +137,12 @@ install -m 0644 misc/conf/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{name
 cat misc/conf/zabbix_agentd.conf | sed \
     -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_agentd.pid|g' \
     -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
+    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
     > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_agentd.conf
 cat misc/conf/zabbix_server.conf | sed \
     -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix.pid|g' \
     -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_server.log|g' \
+    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
     -e 's|AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
     -e 's|DBUser=root|DBUser=zabbix|g' \
     -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/%{zdb}/%{zdb}.sock|g' \
@@ -250,6 +252,10 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Mon Jul 07 2008 Dan Horak <dan[at]danny.cz> - 1.4.5-4
+- add LSB headers into init scripts
+- disable internal log rotation
+
 * Fri May 02 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-3
 - Seems the zabbix folks replaced the original 1.4.5 tarball with
   an updated tarball or something -- it actually does contain a

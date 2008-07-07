@@ -4,6 +4,16 @@
 # description: zabbix server daemon
 #
 
+### BEGIN INIT INFO
+# Provides: zabbix
+# Required-Start: $local_fs $network
+# Required-Stop: $local_fs $network
+# Default-Start:
+# Default-Stop: 0 1 2 3 4 5 6
+# Short-Description: start and stop zabbix server
+# Description: Zabbix Server
+### END INIT INFO
+
 # zabbix details
 ZABBIX=/usr/sbin/zabbix_server
 CONF=/etc/zabbix/zabbix_server.conf
@@ -18,8 +28,8 @@ PIDFILE=/var/run/zabbix.pid
 # Check that networking is up.
 [ ${NETWORKING} = "no" ] && exit 0
 
-[ -x $ZABBIX ] || exit 0
-[ -e $CONF ] || exit 0
+[ -x $ZABBIX ] || exit 5
+[ -e $CONF ] || exit 6
 
 RETVAL=0
 
