@@ -1,6 +1,6 @@
 Name:           zabbix
-Version:        1.4.5
-Release:        4%{?dist}
+Version:        1.4.6
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -252,6 +252,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Fri Jul 25 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.4.6-1
+- Update to 1.4.6
+
 * Mon Jul 07 2008 Dan Horak <dan[at]danny.cz> - 1.4.5-4
 - add LSB headers into init scripts
 - disable internal log rotation
