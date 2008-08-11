@@ -1,10 +1,10 @@
 Name:           zabbix
 Version:        1.4.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
-License:        GPL
+License:        GPLv2+
 URL:            http://www.zabbix.com/
 Source0:        http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.gz
 Source1:        zabbix-web.conf
@@ -252,6 +252,9 @@ fi
 %{_datadir}/%{name}/js/*
 
 %changelog
+* Mon Aug 11 2008 Jason L Tibbitts III <tibbs@math.uh.edu> - 1.4.6-2
+- Fix license tag.
+
 * Fri Jul 25 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.4.6-1
 - Update to 1.4.6
 
