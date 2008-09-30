@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6
-Release:        1%{?dist}
+Release:        1.1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -464,6 +464,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Tue Sep 30 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6-1.1
+- Bump release because forgot to add some new files.
+
 * Thu Sep 30 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6-1
 - Update to final 1.6
 
