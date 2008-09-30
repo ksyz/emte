@@ -1,0 +1,14 @@
+diff --git a/src/zabbix_server/poller/checks_snmp.c b/src/zabbix_server/poller/checks_snmp.c
+index 81c2f5d..be6a322 100644
+--- a/src/zabbix_server/poller/checks_snmp.c
++++ b/src/zabbix_server/poller/checks_snmp.c
+@@ -875,7 +875,8 @@ static ZBX_MIB_NORM mibs[]=
+ 	{"ifInDiscards",	"1.3.6.1.2.1.2.2.1.13"},
+ 	{"ifInErrors",		"1.3.6.1.2.1.2.2.1.14"},
+ 	{"ifInUnknownProtos",	"1.3.6.1.2.1.2.2.1.15"},
+-	{"ifOutOctets",		"1.3.6.1.2.1.2.2.1.17"},
++	{"ifOutOctets",		"1.3.6.1.2.1.2.2.1.16"},
++	{"ifOutUcastPkts",	"1.3.6.1.2.1.2.2.1.17"},
+ 	{"ifOutNUcastPkts",	"1.3.6.1.2.1.2.2.1.18"},
+ 	{"ifOutDiscards",	"1.3.6.1.2.1.2.2.1.19"},
+ 	{"ifOutErrors",		"1.3.6.1.2.1.2.2.1.20"},

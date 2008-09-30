@@ -15,7 +15,16 @@
 ### END INIT INFO
 
 # zabbix details
-ZABBIX=/usr/sbin/zabbix_server
+if [ -x /usr/sbin/zabbix_server_mysql ]; then
+    ZABBIX=zabbix_server_mysql
+elif [ -x /usr/sbin/zabbix_server_pgsql ]; then
+    ZABBIX=zabbix_server_pgsql
+elif [ -x /usr/sbin/zabbix_server_sqlite3 ]; then
+    ZABBIX=zabbix_server_sqlite3
+else
+    exit 5
+fi
+
 CONF=/etc/zabbix/zabbix_server.conf
 PIDFILE=/var/run/zabbix.pid
 
@@ -28,7 +37,6 @@ PIDFILE=/var/run/zabbix.pid
 # Check that networking is up.
 [ ${NETWORKING} = "no" ] && exit 0
 
-[ -x $ZABBIX ] || exit 5
 [ -e $CONF ] || exit 6
 
 RETVAL=0
@@ -43,7 +51,7 @@ case "$1" in
         ;;
     stop)
         echo -n "Shutting down zabbix server: "
-        killproc zabbix_server
+        killproc $ZABBIX
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/zabbix
@@ -54,7 +62,7 @@ case "$1" in
         RETVAL=$?
         ;;
     status)
-        status zabbix_server
+        status $ZABBIX
         RETVAL=$?
         ;;
     *)
