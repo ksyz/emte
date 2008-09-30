@@ -1,39 +1,35 @@
 Name:           zabbix
-Version:        1.4.6
-Release:        2%{?dist}
+Version:        1.6
+Release:        0.2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
-License:        GPLv2+
+License:        GPL
 URL:            http://www.zabbix.com/
 Source0:        http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.gz
 Source1:        zabbix-web.conf
 Source2:        zabbix-server.init
 Source3:        zabbix-agent.init
-Source4:        zabbix-logrotate.in
-Patch0:         zabbix-1.4.2-cpustats.patch
+Source4:        zabbix-proxy.init
+Source5:        zabbix-logrotate.in
+
+Patch0:         zabbix-1.6-cpustats.patch
+Patch1:		zabbix-1.5.4-ifoutoctets.patch
+
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-%define database mysql
-%define zdb mysql
-%define with_postgresql %{?_with_postgresql: 1} %{?!_with_postgresql: 0}
+BuildRequires:   mysql-devel
+BuildRequires:   postgresql-devel
+BuildRequires:   net-snmp-devel
+BuildRequires:   openldap-devel
+BuildRequires:   gnutls-devel
+BuildRequires:   iksemel-devel
+BuildRequires:   curl-devel
+BuildRequires:   sqlite-devel
+BuildRequires:   unixODBC-devel
 
-# Zabbix can only be built with mysql -or- postgresql
-# support. We build with mysql by default, but you can
-# pass --with postgresql to build with postgresql instead.
-%if %{with_postgresql}
-%define database postgresql
-%define zdb pgsql
-%endif
-
-BuildRequires:  %{database}-devel, net-snmp-devel
-BuildRequires:  openldap-devel, gnutls-devel
-BuildRequires:  iksemel-devel, curl-devel
-Requires:       logrotate, fping, net-snmp-libs
-Requires(pre):      /usr/sbin/useradd
-Requires(post):     /sbin/chkconfig
-Requires(preun):    /sbin/chkconfig
-Requires(preun):    /sbin/service
+Requires:        logrotate
+Requires(pre):   /usr/sbin/useradd
 
 %description
 ZABBIX is software that monitors numerous parameters of a
@@ -55,56 +51,216 @@ role in monitoring IT infrastructure. This is equally true
 for small organisations with a few servers and for large
 companies with a multitude of servers.
 
+%package server
+Summary:         Zabbix server common files
+Group:           Applications/Internet
+Requires:	 zabbix = %{version}-%{release}
+Requires:        zabbix-server-implementation = %{version}-%{release}
+Requires:        fping
+Requires:	 net-snmp
+Requires(post):  /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+Requires(preun): /sbin/service
+
+%description server
+Zabbix server common files
+
+%package server-mysql
+Summary:         Zabbix server compiled to use MySQL
+Group:           Applications/Internet
+Requires:        zabbix = %{version}-%{release}
+Requires:	 zabbix-server = %{version}-%{release}
+Provides:        zabbix-server-implementation = %{version}-%{release}
+Obsoletes:       zabbix <= 1.5.3-0.1
+Conflicts:       zabbix-server-pgsql
+Conflicts:       zabbix-server-sqlite3
+
+%description server-mysql
+Zabbix server compiled to use MySQL
+
+%package server-pgsql
+Summary:         Zabbix server compiled to use PostgresSQL
+Group:           Applications/Internet
+Requires:        zabbix = %{version}-%{release}
+Requires:	 zabbix-server = %{version}-%{release}
+Provides:        zabbix-server-implementation = %{version}-%{release}
+Conflicts:       zabbix-server-mysql
+Conflicts:       zabbix-server-sqlite3
+
+%description server-pgsql
+Zabbix server compiled to use PostgresSQL
+
+%package server-sqlite3
+Summary:         Zabbix server compiled to use SQLite
+Group:           Applications/Internet
+Requires:        zabbix = %{version}-%{release}
+Requires:	 zabbix-server = %{version}-%{release}
+Provides:        zabbix-server-implementation = %{version}-%{release}
+Conflicts:       zabbix-server-mysql
+Conflicts:	 zabbix-server-pgsql
+
+%description server-sqlite3
+Zabbix server compiled to use SQLite
 
 %package agent
-Summary:        Zabbix Agent
-Group:          Applications/Internet
-Requires:       logrotate
-Requires(pre):      /usr/sbin/useradd
-Requires(post):     /sbin/chkconfig
-Requires(preun):    /sbin/chkconfig
-Requires(preun):    /sbin/service
+Summary:         Zabbix Agent
+Group:           Applications/Internet
+Requires:	 zabbix = %{version}-%{release}
+Requires(post):  /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+Requires(preun): /sbin/service
 
 %description agent
-The zabbix client agent, to be installed on monitored systems.
+The Zabbix client agent, to be installed on monitored systems.
+
+%package proxy
+Summary:         Zabbix Proxy
+Group:           Applications/Internet
+Requires:	 zabbix = %{version}-%{release}
+Requires:        zabbix-proxy-implementation = %{version}-%{release}
+Requires(post):  /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+Requires(preun): /sbin/service
+Requires:        fping
+
+%description proxy
+The Zabbix proxy
+
+%package proxy-mysql
+Summary:         Zabbix proxy compiled to use MySQL
+Group:           Applications/Internet
+Requires:	 zabbix-proxy = %{version}-%{release}
+Provides:        zabbix-proxy-implementation = %{version}-%{release}
+
+%description proxy-mysql
+The Zabbix proxy compiled to use MySQL
+
+%package proxy-pgsql
+Summary:         Zabbix proxy compiled to use PostgreSQL
+Group:           Applications/Internet
+Requires:	 zabbix-proxy = %{version}-%{release}
+Provides:        zabbix-proxy-implementation = %{version}-%{release}
+
+%description proxy-pgsql
+The Zabbix proxy compiled to use PostgreSQL
+
+%package proxy-sqlite3
+Summary:         Zabbix proxy compiled to use SQLite
+Group:           Applications/Internet
+Requires:	 zabbix-proxy = %{version}-%{release}
+Provides:        zabbix-proxy-implementation = %{version}-%{release}
+
+%description proxy-sqlite3
+The Zabbix proxy compiled to use SQLite
 
 %package web
-Summary:        Zabbix Web Frontend
-Group:          Applications/Internet
-Requires:       php, php-%{zdb}, php-gd, php-bcmath
+Summary:         Zabbix Web Frontend
+Group:           Applications/Internet
+Requires:        php
+Requires:	 php-gd
+Requires:	 php-bcmath
+Requires:	 zabbix-web-database = %{version}-%{release}
 
 %description web
 The php frontend to display the zabbix web interface.
 
-%prep
-%setup -q
-%patch0 -p1 -b .cpustats
+%package web-mysql
+Summary:         Zabbix web frontend for MySQL
+Group:           Applications/Internet
+Requires:	 zabbix-web = %{version}-%{release}
+Requires:	 php-mysql
+Provides:	 zabbix-web-database = %{version}-%{release}
+Obsoletes:	 zabbix-web <= 1.5.3-0.1
 
-# shuffle sql init files around to fix up install
-mkdir -p dbinit/{schema,data}
-cp create/schema/%{database}.sql dbinit/schema/
-cp create/data/images_%{zdb}.sql dbinit/data/
-cp create/data/data.sql dbinit/data/
+%description web-mysql
+Zabbix web frontend for MySQL
+
+%package web-pgsql
+Summary:         Zabbix web frontend for PostgreSQL
+Group:           Applications/Internet
+Requires:	 zabbix-web = %{version}-%{release}
+Requires:	 php-pgsql
+Provides:	 zabbix-web-database = %{version}-%{release}
+
+%description web-pgsql
+Zabbix web frontend for PostgreSQL
+
+%package web-sqlite3
+Summary:         Zabbix web frontend for SQLite
+Group:           Applications/Internet
+Requires:	 zabbix-web = %{version}-%{release}
+Provides:	 zabbix-web-database = %{version}-%{release}
+
+%description web-sqlite3
+Zabbix web frontend for SQLite
+
+%prep
+%setup0 -q
+%patch0 -p1 -b .cpustats
+%patch1 -p1 -b .ifoutoctets
+
+chmod -R a+rX .
+
+# nuke erronious executable permissions
+#chmod -x src/zabbix_agent/eventlog.c
 
 # fix up some lib64 issues
 %{__perl} -pi.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
     configure
 
-
 %build
-#export LIBCURL_LDFLAGS="-I%{_includedir}/curl"
-#export LIBCURL_LIBS="-lcurl"
+
 %configure \
     --enable-server \
     --enable-agent \
-    --with-%{zdb} \
+    --enable-proxy \
+    --enable-ipv6 \
+    --with-mysql \
     --with-net-snmp \
     --with-ldap \
     --with-libcurl \
-    --with-jabber
+    --with-jabber \
+    --with-unixodbc
 
-#make %{?_smp_mflags} CFLAGS="$RPM_OPT_FLAGS"
 make %{?_smp_mflags}
+
+mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_mysql
+mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_mysql
+
+%configure \
+    --enable-server \
+    --enable-agent \
+    --enable-proxy \
+    --enable-ipv6 \
+    --with-pgsql \
+    --with-net-snmp \
+    --with-ldap \
+    --with-libcurl \
+    --with-jabber \
+    --with-unixodbc
+
+make %{?_smp_mflags}
+mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_pgsql
+mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_pgsql
+
+%configure \
+    --enable-server \
+    --enable-agent \
+    --enable-proxy \
+    --enable-ipv6 \
+    --with-sqlite3 \
+    --with-net-snmp \
+    --with-ldap \
+    --with-libcurl \
+    --with-jabber \
+    --with-unixodbc
+
+make %{?_smp_mflags}
+mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_sqlite3
+mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_sqlite3
+
+touch src/zabbix_server/zabbix_server
+touch src/zabbix_proxy/zabbix_proxy
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -116,6 +272,13 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_datadir}
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/%{name}
+
+#rm create/Makefile*
+#rm create/data/images_oracle.sql
+#rm create/schema/oracle.sql
+#rm -r upgrades/dbpatches/1.6/oracle
+
+#pushd %{name}-%{version}-mysql
 # php frontend
 cp -a frontends/php $RPM_BUILD_ROOT%{_datadir}/%{name}
 mv $RPM_BUILD_ROOT%{_datadir}/%{name}/include/db.inc.php \
@@ -133,7 +296,7 @@ ln -s ../../../..%{_sysconfdir}/%{name}/zabbix.conf.php \
 rm -f $RPM_BUILD_ROOT%{_datadir}/%{name}/include/.htaccess
 rm -f $RPM_BUILD_ROOT%{_datadir}/%{name}/include/classes/.htaccess
 # drop config files in place
-install -m 0644 misc/conf/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
+install -m 0644 -p misc/conf/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
 cat misc/conf/zabbix_agentd.conf | sed \
     -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_agentd.pid|g' \
     -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
@@ -145,30 +308,42 @@ cat misc/conf/zabbix_server.conf | sed \
     -e 's|#LogFileSize=.*|LogFileSize=0|g' \
     -e 's|AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
     -e 's|DBUser=root|DBUser=zabbix|g' \
-    -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/%{zdb}/%{zdb}.sock|g' \
+    -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
     > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_server.conf
-install -m 0644 %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{name}.conf
+cat misc/conf/zabbix_proxy.conf | sed \
+    -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_proxy.pid|g' \
+    -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_proxy.log|g' \
+    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
+    -e 's|AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
+    -e 's|DBUser=root|DBUser=zabbix|g' \
+    -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
+    > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_proxy.conf
+install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{name}.conf
 # log rotation
-cat %{SOURCE4} | sed -e 's|COMPONENT|server|g' > \
-     $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix
-cat %{SOURCE4} | sed -e 's|COMPONENT|agentd|g' > \
+cat %{SOURCE5} | sed -e 's|COMPONENT|server|g' > \
+     $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-server
+cat %{SOURCE5} | sed -e 's|COMPONENT|agentd|g' > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-agent
+cat %{SOURCE5} | sed -e 's|COMPONENT|proxy|g' > \
+     $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-proxy
 # init scripts
-install -m 0755 %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix
-install -m 0755 %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-agent
+install -m 0755 -p %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-server
+install -m 0755 -p %{SOURCE3} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-agent
+install -m 0755 -p %{SOURCE4} $RPM_BUILD_ROOT%{_sysconfdir}/init.d/zabbix-proxy
 
 # set up config dir
 
 # install
 make DESTDIR=$RPM_BUILD_ROOT install
+rm $RPM_BUILD_ROOT%{_sbindir}/zabbix_server
+install -m 0755 -p src/zabbix_server/zabbix_server_* $RPM_BUILD_ROOT%{_sbindir}/
+rm $RPM_BUILD_ROOT%{_sbindir}/zabbix_proxy
+install -m 0755 -p src/zabbix_proxy/zabbix_proxy_* $RPM_BUILD_ROOT%{_sbindir}/
 
 # nuke static libs and empty oracle upgrade sql
-rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a upgrades/dbpatches/1.4/oracle
+rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a
 # nuke extraneous sql files
 rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/create
-# nuke erronious executable permissions
-chmod -x src/zabbix_agent/eventlog.c
-
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -178,22 +353,20 @@ rm -rf $RPM_BUILD_ROOT
 /usr/sbin/useradd -c "Zabbix Monitoring System" \
         -s /sbin/nologin -r -d %{_localstatedir}/lib/%{name} zabbix 2> /dev/null || :
 
-%pre agent
-# Add the "zabbix" user
-/usr/sbin/useradd -c "Zabbix Monitoring System" \
-        -s /sbin/nologin -r -d %{_localstatedir}/lib/%{name} zabbix 2> /dev/null || :
-
-%post
-/sbin/chkconfig --add zabbix
+%post server
+/sbin/chkconfig --add zabbix-server
 
 %post agent
 /sbin/chkconfig --add zabbix-agent
 
-%preun
+%post proxy
+/sbin/chkconfig --add zabbix-proxy
+
+%preun server
 if [ "$1" = 0 ]
 then
-  /sbin/service zabbix stop >/dev/null 2>&1 || :
-  /sbin/chkconfig --del zabbix
+  /sbin/service zabbix-server stop >/dev/null 2>&1 || :
+  /sbin/chkconfig --del zabbix-server
 fi
 
 %preun agent
@@ -203,55 +376,97 @@ then
   /sbin/chkconfig --del zabbix-agent
 fi
 
+%preun proxy
+if [ "$1" = 0 ]
+then
+  /sbin/service zabbix-proxy stop >/dev/null 2>&1 || :
+  /sbin/chkconfig --del zabbix-proxy
+fi
+
 %files
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/zabbix
+%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/zabbix
+%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/zabbix
+
+%files server
+%defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
-%doc docs/*.pdf upgrades/dbpatches dbinit
-%dir %{_sysconfdir}/%{name}
-%{_sbindir}/zabbix_server
-%{_sysconfdir}/init.d/zabbix
-%config(noreplace) %{_sysconfdir}/logrotate.d/zabbix
-%config(noreplace) %{_sysconfdir}/%{name}/zabbix_server.conf
-%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/%{name}
-%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/%{name}
+%doc docs/*.pdf upgrades/dbpatches create/data create/schema
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix_server.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
+%{_sysconfdir}/init.d/zabbix-server
+
+%files server-mysql
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%defattr(-,root,root,-)
+%{_sbindir}/zabbix_server_mysql
+
+%files server-pgsql
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%defattr(-,root,root,-)
+%{_sbindir}/zabbix_server_pgsql
+
+%files server-sqlite3
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%defattr(-,root,root,-)
+%{_sbindir}/zabbix_server_sqlite3
 
 %files agent
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING FAQ NEWS README
-%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix_agent.conf
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix_agentd.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
+%{_sysconfdir}/init.d/zabbix-agent
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
 %{_sbindir}/zabbix_sender
 %{_sbindir}/zabbix_get
-%{_sysconfdir}/init.d/zabbix-agent
-%config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
-%config(noreplace) %{_sysconfdir}/%{name}/zabbix_agent.conf
-%config(noreplace) %{_sysconfdir}/%{name}/zabbix_agentd.conf
-%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/%{name}
-%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/%{name}
+
+%files proxy
+%defattr(-,root,root,-)
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix_proxy.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
+%{_sysconfdir}/init.d/zabbix-proxy
+
+%files proxy-mysql
+%defattr(-,root,root,-)
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%{_sbindir}/zabbix_proxy_mysql
+
+%files proxy-pgsql
+%defattr(-,root,root,-)
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%{_sbindir}/zabbix_proxy_pgsql
+
+%files proxy-sqlite3
+%defattr(-,root,root,-)
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%{_sbindir}/zabbix_proxy_sqlite3
 
 %files web
 %defattr(-,root,root,-)
-%doc README
-%dir %{_sysconfdir}/%{name}
-%config(noreplace) %{_sysconfdir}/%{name}/zabbix.conf.php
-%config(noreplace) %{_sysconfdir}/%{name}/db.inc.php
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
-%dir %{_datadir}/%{name}
-%dir %{_datadir}/%{name}/audio
-%dir %{_datadir}/%{name}/conf
-%dir %{_datadir}/%{name}/images
-%dir %{_datadir}/%{name}/include
-%dir %{_datadir}/%{name}/js
-%{_datadir}/%{name}/*.php
-%{_datadir}/%{name}/css.css
-%{_datadir}/%{name}/audio/*
-%{_datadir}/%{name}/conf/*
-%{_datadir}/%{name}/images/*
-%{_datadir}/%{name}/include/*
-%{_datadir}/%{name}/js/*
+%doc AUTHORS ChangeLog COPYING FAQ NEWS README
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix.conf.php
+%config(noreplace) %{_sysconfdir}/zabbix/db.inc.php
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/zabbix.conf
+%{_datadir}/zabbix
+
+%files web-mysql
+%defattr(-,root,root,-)
+
+%files web-pgsql
+%defattr(-,root,root,-)
+
+%files web-sqlite3
+%defattr(-,root,root,-)
 
 %changelog
+* Thu Sep 30 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6-1
+- Update to final 1.6
+
 * Mon Aug 11 2008 Jason L Tibbitts III <tibbs@math.uh.edu> - 1.4.6-2
 - Fix license tag.
 
