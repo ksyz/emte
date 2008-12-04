@@ -159,6 +159,7 @@ Group:           Applications/Internet
 Requires:        php
 Requires:	 php-gd
 Requires:	 php-bcmath
+Requires:        zabbix = %{version}-%{release}
 Requires:	 zabbix-web-database = %{version}-%{release}
 
 %description web
@@ -464,6 +465,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Thu Dec  4 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.1-1
+- Fix BZ#474593 by adding a requires.
+
 * Wed Nov  5 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.1-1
 - Update to 1.6.1
 
