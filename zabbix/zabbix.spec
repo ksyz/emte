@@ -1,5 +1,5 @@
 Name:           zabbix
-Version:        1.6.1
+Version:        1.6.2
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -13,8 +13,7 @@ Source3:        zabbix-agent.init
 Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 
-Patch0:         zabbix-1.6-cpustats.patch
-Patch1:		zabbix-1.5.4-ifoutoctets.patch
+Patch0:         zabbix-1.6.2-cpustats.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -198,7 +197,6 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q
 %patch0 -p1 -b .cpustats
-%patch1 -p1 -b .ifoutoctets
 
 chmod -R a+rX .
 
@@ -465,6 +463,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Fri Jan 16 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-1
+- Update to 1.6.2: http://www.zabbix.com/rn1.6.2.php
+
 * Thu Dec  4 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.1-1
 - Fix BZ#474593 by adding a requires.
 
