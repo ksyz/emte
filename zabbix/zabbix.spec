@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -463,6 +463,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Fri Jan 23 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-2
+- Rebuild for MySQL 5.1.X
+
 * Fri Jan 16 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-1
 - Update to 1.6.2: http://www.zabbix.com/rn1.6.2.php
 
