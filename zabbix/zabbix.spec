@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -463,6 +463,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.6.2-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
+
 * Fri Jan 23 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-2
 - Rebuild for MySQL 5.1.X
 
