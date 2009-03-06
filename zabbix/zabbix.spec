@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -14,6 +14,7 @@ Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 
 Patch0:         zabbix-1.6.2-cpustats.patch
+Patch1:		zabbix-1.6.3-pre.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -197,6 +198,7 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q
 %patch0 -p1 -b .cpustats
+%patch1 -p1 -b .pre
 
 chmod -R a+rX .
 
@@ -463,6 +465,10 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Wed Mar  4 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-4
+- Update to a SVN snapshot of the upstream 1.6 branch to fix security
+  issue (BZ#488501)
+
 * Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.6.2-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
 
