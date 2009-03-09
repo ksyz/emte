@@ -1,10 +1,16 @@
 diff --git a/ChangeLog b/ChangeLog
-index b6ee465..e217193 100644
+index b6ee465..47f1cce 100644
 --- a/ChangeLog
 +++ b/ChangeLog
-@@ -1,3 +1,71 @@
+@@ -1,3 +1,77 @@
 +Changes for 1.6.3
 +
++ - [ZBX-448] fixed zabbix server status when frontend and backend are on different servers (Vedmak)
++ - [ZBX-660] fixed screen clock set to server time showed local time (Artem)
++ - [ZBX-603] fixed min autologout value to 90 seconds (amach)
++ - [ZBX-762] improved performance of processing of log and text items (Sasha)
++ - [ZBX-749] details box is open by default if any error occured (Vedmak)
++ - [ZBX-751] expanded details box added for triggers copying messages (Vedmak)
 + - [DEV-268] added support of <mode> for system.cpu.util under Solaris (Sasha)
 + - [ZBX-737] the behaviour of the agent's key "vfs.fs.size" improved to be similar to the "df" command (Dmitry)
 + - [ZBX-599] the purpose of the configuration parameter StartAgents precised (Dmitry)
@@ -5654,6 +5660,9 @@ index 067b6bb..ba2f9b9 100644
  	$p_elements[] = get_table_header(SPACE, $form);
  
  // TABLE
+diff --git a/frontends/php/images/flash/zbxclock.swf b/frontends/php/images/flash/zbxclock.swf
+index 3bd482b..776f3ae 100644
+Binary files a/frontends/php/images/flash/zbxclock.swf and b/frontends/php/images/flash/zbxclock.swf differ
 diff --git a/frontends/php/include/actions.inc.php b/frontends/php/include/actions.inc.php
 index 33316fe..1088d00 100644
 --- a/frontends/php/include/actions.inc.php
@@ -6260,6 +6269,19 @@ index dad01cc..91a412a 100644
 +			$this->addItem(array($txt, $lbl));
  			
  			insert_show_color_picker_javascript();
+ 		}
+diff --git a/frontends/php/include/classes/cflashclock.mod.php b/frontends/php/include/classes/cflashclock.mod.php
+index 8f359fd..5ab5ed5 100644
+--- a/frontends/php/include/classes/cflashclock.mod.php
++++ b/frontends/php/include/classes/cflashclock.mod.php
+@@ -47,7 +47,7 @@
+ 		function BodyToString()
+ 		{
+ 			if($this->timetype == TIME_TYPE_SERVER)
+-				$this->SetSrc($this->src."&timestamp=".time());
++				$this->setSrc($this->src.'&timestamp='.(time() + date('Z')));
+ 
+ 			return parent::BodyToString();	
  		}
 diff --git a/frontends/php/include/classes/cform.inc.php b/frontends/php/include/classes/cform.inc.php
 index 4f87073..5678b90 100644
@@ -7499,7 +7521,7 @@ index 0000000..150718f
 +}
 \ No newline at end of file
 diff --git a/frontends/php/include/config.inc.php b/frontends/php/include/config.inc.php
-index 1e11d0b..bbd154d 100644
+index 1e11d0b..b001b4a 100644
 --- a/frontends/php/include/config.inc.php
 +++ b/frontends/php/include/config.inc.php
 @@ -30,7 +30,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
@@ -7660,6 +7682,15 @@ index 1e11d0b..bbd154d 100644
  	function show_messages($bool=TRUE,$okmsg=NULL,$errmsg=NULL){
  		global	$page, $ZBX_MESSAGES;
  
+@@ -364,7 +377,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+ 		else if($bool && !is_null($okmsg))	$msg=$okmsg;
+ 
+ 		if(isset($msg)){
+-			switch($page["type"]){
++			switch($page['type']){
+ 				case PAGE_TYPE_IMAGE:
+ 					array_push($message, array(
+ 						'text'	=> $msg,
 @@ -372,29 +385,29 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  						'font'	=> 2));
  					$width = max($width, ImageFontWidth(2) * strlen($msg) + 1);
@@ -7676,8 +7707,9 @@ index 1e11d0b..bbd154d 100644
  					$msg_tab->setCellPadding(0);
  					$msg_tab->setCellSpacing(0);
 -					
+-					$msg_col = new CCol(bold($msg),'msg');
 +
- 					$msg_col = new CCol(bold($msg),'msg');
++					$msg_col = new CCol(bold($msg),'msg_main msg');
  					$msg_col->addOption('id','page_msg');
 -					
 +
@@ -7710,7 +7742,7 @@ index 1e11d0b..bbd154d 100644
 +					$msg_count = $msg_show;
 +
 +					$msg_count = ($msg_count * 16);
-+					$lst_error->AddOption('style','height: '.$msg_count.'px;');
++					$lst_error->addOption('style','height: '.$msg_count.'px;');
 +				}
  
 -				$msg_count = ($msg_count * $msg_font_size * 4);
@@ -7726,8 +7758,9 @@ index 1e11d0b..bbd154d 100644
  				$tab->addOption('id','msg_messages');
  				$tab->addOption('style','width: 100%;');
 -				
+-				if(isset($msg_tab)){
 +
- 				if(isset($msg_tab)){
++				if(isset($msg_tab) && is_null($errmsg)){					
  					$tab->addOption('style','display: none;');
  				}
 -				
@@ -7777,7 +7810,31 @@ index 1e11d0b..bbd154d 100644
  //	The hash has form <md5sum of triggerid>,<sum of priorities>
  	function calc_trigger_hash(){
  
-@@ -770,7 +784,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -727,16 +741,15 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+ 	}
+ 
+ 	function get_status(){
+-//		global $DB;
++		global $ZBX_SERVER, $ZBX_SERVER_PORT;
++
+ 		$status = array();
+ // server
+-		if( (exec('ps -ef|grep zabbix_server|grep -v grep|wc -l')>0) || (exec('ps -ax|grep zabbix_server|grep -v grep|wc -l')>0) ){
+-			$status["zabbix_server"] = S_YES;
+-		}
+-		else{
+-			$status["zabbix_server"] = S_NO;
+-		}
+-// history & trends
++		$checkport = fsockopen($ZBX_SERVER, $ZBX_SERVER_PORT, $errnum, $errstr, 2);
++		
++		$status["zabbix_server"] = ($checkport) ? S_YES : S_NO;
++
++		// history & trends
+ /*		if ($DB['DB_TYPE'] == "MYSQL"){
+ 			$row=DBfetch(DBselect('show table status like "history"'));
+ 			$status["history_count"]  = $row["Rows"];
+@@ -770,7 +783,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  // alerts
  /*		$row=DBfetch(DBselect('SELECT COUNT(alertid) as cnt from alerts"));
  		$status["alerts_count"]=$row["cnt"];*/
@@ -7786,7 +7843,7 @@ index 1e11d0b..bbd154d 100644
  // triggers
  		$sql = 'SELECT COUNT(DISTINCT t.triggerid) as cnt '.
  				' FROM triggers t, functions f, items i, hosts h'.
-@@ -779,7 +793,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -779,7 +792,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  					' AND i.status='.ITEM_STATUS_ACTIVE.
  					' AND i.hostid=h.hostid '.
  					' AND h.status='.HOST_STATUS_MONITORED;
@@ -7795,7 +7852,7 @@ index 1e11d0b..bbd154d 100644
  		$row=DBfetch(DBselect($sql));
  		$status['triggers_count']=$row['cnt'];
  
-@@ -797,13 +811,13 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -797,13 +810,13 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  
  		$row=DBfetch(DBselect($sql.' and t.status=0 and t.value=2'));
  		$status['triggers_count_unknown']=$row['cnt'];
@@ -7812,7 +7869,7 @@ index 1e11d0b..bbd154d 100644
  		$row=DBfetch(DBselect($sql));
  		$status['items_count']=$row['cnt'];
  
-@@ -818,7 +832,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -818,7 +831,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  
  		$row=DBfetch(DBselect($sql.' and i.type=2'));
  		$status['items_count_trapper']=$row['cnt'];
@@ -7821,7 +7878,7 @@ index 1e11d0b..bbd154d 100644
  // hosts
  		$sql = 'SELECT COUNT(hostid) as cnt '.
  				' FROM hosts '.
-@@ -837,20 +851,20 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -837,20 +850,20 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  
  		$row=DBfetch(DBselect('SELECT COUNT(hostid) as cnt FROM hosts WHERE status='.HOST_STATUS_DELETED));
  		$status['hosts_count_deleted']=$row['cnt'];
@@ -7846,7 +7903,7 @@ index 1e11d0b..bbd154d 100644
  		$result=DBselect('SELECT DISTINCT s.userid '.
  						' FROM sessions s, users u '.
  						' WHERE u.userid=s.userid '.
-@@ -985,19 +999,19 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -985,19 +998,19 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  		global $IMAGE_FORMAT_DEFAULT;
  
  		if(is_null($format)) $format = $IMAGE_FORMAT_DEFAULT;
@@ -7874,7 +7931,7 @@ index 1e11d0b..bbd154d 100644
  		if(IMAGE_FORMAT_JPEG == $format)
  			ImageJPEG($image);
  		else
-@@ -1037,7 +1051,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1037,7 +1050,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  		if(!is_array($mappings))	return FALSE;
  
  		$valuemapid = get_dbid("valuemaps","valuemapid");
@@ -7883,7 +7940,7 @@ index 1e11d0b..bbd154d 100644
  		$result = DBexecute("insert into valuemaps (valuemapid,name) values ($valuemapid,".zbx_dbstr($name).")");
  		if(!$result)
  			return $result;
-@@ -1094,18 +1108,18 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1094,18 +1107,18 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  	function zbx_stripslashes($value){
  		if(is_array($value)){
  			foreach($value as $id => $data)
@@ -7905,7 +7962,7 @@ index 1e11d0b..bbd154d 100644
  	function str2mem($val){
  		$val = trim($val);
  		$last = strtolower($val{strlen($val)-1});
-@@ -1121,7 +1135,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1121,7 +1134,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  
  		return $val;
  	}
@@ -7914,7 +7971,7 @@ index 1e11d0b..bbd154d 100644
  	function mem2str($size){
  		$prefix = 'B';
  		if($size > 1048576) {	$size = $size/1048576;	$prefix = 'M'; }
-@@ -1129,7 +1143,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1129,7 +1142,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  		return round($size, 6).$prefix;
  	}
  
@@ -7923,7 +7980,7 @@ index 1e11d0b..bbd154d 100644
  	function convert_units($value,$units){
  // Special processing for unix timestamps
  		if($units=="unixtime"){
-@@ -1161,7 +1175,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1161,7 +1174,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  		}
  // Special processing for seconds
  		if($units=="s"){
@@ -7932,7 +7989,7 @@ index 1e11d0b..bbd154d 100644
  		}
  
  		$u="";
-@@ -1185,7 +1199,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1185,7 +1198,7 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  				$u="G";
  				$value=$value/(1000*1000*1000);
  			}
@@ -7941,7 +7998,7 @@ index 1e11d0b..bbd154d 100644
  			if(round($value) == round($value,2)){
  				$s=sprintf("%.0f",$value);
  			}
-@@ -1250,10 +1264,10 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1250,10 +1263,10 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  	 */
  	function validate_sort_and_sortorder($sort=NULL,$sortorder=ZBX_SORT_UP){
  		global $page;
@@ -7954,7 +8011,7 @@ index 1e11d0b..bbd154d 100644
  		if(!is_null($_REQUEST['sort'])){
  			$_REQUEST['sort'] = eregi_replace('[^a-z\.\_]','',$_REQUEST['sort']);
  			update_profile('web.'.$page["file"].'.sort',		$_REQUEST['sort']);
-@@ -1275,15 +1289,15 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1275,15 +1288,15 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  	 */
  	function make_sorting_link($obj,$tabfield,$url=''){
  		global $page;
@@ -7973,7 +8030,7 @@ index 1e11d0b..bbd154d 100644
  				list($name,$value) = explode('=',$param);
  				if(zbx_empty($name) || ($name == 'sort') || (($name == 'sortorder'))) continue;
  				$url.=$param.'&';
-@@ -1292,16 +1306,16 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1292,16 +1305,16 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  		else{
  			$url.='&';
  		}
@@ -7993,7 +8050,7 @@ index 1e11d0b..bbd154d 100644
  		if(isset($_REQUEST['sort']) && ($tabfield == $_REQUEST['sort'])){
  			if($sortorder == ZBX_SORT_UP){
  				$img = new CImg('images/general/sort_downw.gif','down',10,10);
-@@ -1309,22 +1323,22 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
+@@ -1309,22 +1322,22 @@ function TODO($msg) { echo "TODO: ".$msg.SBR; }  // DEBUG INFO!!!
  			else{
  				$img = new CImg('images/general/sort_upw.gif','up',10,10);
  			}
@@ -8198,7 +8255,7 @@ index 2077106..a7e153b 100644
  			zbx_xmlwriter_start_element ($memory,XML_TAG_GRAPH_ELEMENT);
  			
 diff --git a/frontends/php/include/forms.inc.php b/frontends/php/include/forms.inc.php
-index 366e6c1..4bb57c6 100644
+index 366e6c1..84a46d1 100644
 --- a/frontends/php/include/forms.inc.php
 +++ b/frontends/php/include/forms.inc.php
 @@ -26,9 +26,9 @@
@@ -8657,7 +8714,31 @@ index 366e6c1..4bb57c6 100644
  		$config = select_config();
  
  		$frm_title = S_USER;
-@@ -744,7 +738,7 @@
+@@ -724,13 +718,20 @@
+ 			$user_type	= get_request('user_type',USER_TYPE_ZABBIX_USER);;
+ 			$user_groups	= get_request('user_groups',array());
+ 			$change_password = get_request('change_password', null);
+-
+ 			$user_medias		= get_request('user_medias', array());
+-
+ 			$new_group_id	= get_request('new_group_id', 0);
+ 			$new_group_name = get_request('new_group_name', '');
+ 		}
+-
++		
++		if ($autologin > 0) {
++			$autologout = 0;
++			zbx_add_post_js("document.getElementById('autologout_visible').disabled = true;");
++		} else if (isset($_REQUEST['autologout'])) {
++			if ($autologout >= 0 && $autologout < 90) {
++				$autologout = 90;
++			}
++		}
++		
+ 		$perm_details	= get_request('perm_details',0);
+ 
+ 		$media_types = array();
+@@ -744,7 +745,7 @@
  
  			while($db_media_type = DBfetch($db_media_types)){
  				$media_types[$db_media_type['mediatypeid']] = $db_media_type['description'];
@@ -8666,7 +8747,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		$frmUser = new CFormTable($frm_title);
-@@ -761,7 +755,7 @@
+@@ -761,7 +762,7 @@
  		}
  
  		$auth_type = (isset($userid))?get_user_system_auth($userid):$config['authentication_type'];
@@ -8675,7 +8756,7 @@ index 366e6c1..4bb57c6 100644
  		if(ZBX_AUTH_INTERNAL == $auth_type){
  			if(!isset($userid) || isset($change_password)){
  				$frmUser->AddRow(S_PASSWORD,	new CPassBox('password1',$password1,20));
-@@ -773,7 +767,7 @@
+@@ -773,7 +774,7 @@
  				$passwd_but = new CButton('change_password', S_CHANGE_PASSWORD);
  				if($alias == ZBX_GUEST_USER){
  					$passwd_but->AddOption('disabled','disabled');
@@ -8684,7 +8765,7 @@ index 366e6c1..4bb57c6 100644
  				$frmUser->AddRow(S_PASSWORD, $passwd_but);
  			}
  		}
-@@ -783,7 +777,7 @@
+@@ -783,7 +784,7 @@
  				$frmUser->addVar('password2','');
  			}
  		}
@@ -8693,7 +8774,7 @@ index 366e6c1..4bb57c6 100644
  		if($profile==0){
  			global $USER_DETAILS;
  
-@@ -799,7 +793,7 @@
+@@ -799,7 +800,7 @@
  				$cmbUserType->AddItem(USER_TYPE_SUPER_ADMIN,	user_type2str(USER_TYPE_SUPER_ADMIN));
  				$frmUser->AddRow(S_USER_TYPE, $cmbUserType);
  			}
@@ -8702,7 +8783,7 @@ index 366e6c1..4bb57c6 100644
  			$lstGroups = new CListBox('user_groups_to_del[]');
  			$lstGroups->options['style'] = 'width: 320px';
  
-@@ -807,10 +801,10 @@
+@@ -807,10 +808,10 @@
  				$lstGroups->AddItem($groupid,	$group_name);
  			}
  
@@ -8716,7 +8797,7 @@ index 366e6c1..4bb57c6 100644
  					new CButton('add_group',S_ADD,
  						'return PopUp("popup_usrgrp.php?dstfrm='.$frmUser->GetName().
  						'&list_name=user_groups_to_del[]&var_name=user_groups",450, 450);'),
-@@ -838,7 +832,7 @@
+@@ -838,7 +839,7 @@
  								'&period='.$one_media['period'].
  								'&severity='.$one_media['severity'].
  								'&active='.$one_media['active'];
@@ -8725,7 +8806,7 @@ index 366e6c1..4bb57c6 100644
  				$media_table->AddRow(array(
  					new CCheckBox('user_medias_to_del['.$id.']',null,null,$id),
  					new CSpan($media_types[$one_media['mediatypeid']], 'nowrap'),
-@@ -851,7 +845,7 @@
+@@ -851,7 +852,7 @@
  			}
  
  			$frmUser->AddRow(
@@ -8734,7 +8815,7 @@ index 366e6c1..4bb57c6 100644
  						array($media_table,
  							new CButton('add_media',S_ADD,'javascript: return PopUp("popup_media.php?dstfrm='.$frmUser->GetName().'",550,400);'),
  							SPACE,
-@@ -863,14 +857,14 @@
+@@ -863,27 +864,34 @@
  		foreach($ZBX_LOCALES as $loc_id => $loc_name){
  			$cmbLang->AddItem($loc_id,$loc_name);
  		}
@@ -8751,17 +8832,34 @@ index 366e6c1..4bb57c6 100644
 +
  		$frmUser->AddRow(S_THEME, $cmbTheme);
  
- 		$chkbx_autologin = new CCheckBox("autologin",
-@@ -878,7 +872,7 @@
- 							new CScript(" var autologout = document.getElementById('autologout'); autologout.value = 0; autologout.readOnly=this.checked; autologout.disabled=false;"),
- 							1);
+-		$chkbx_autologin = new CCheckBox("autologin",
+-							$autologin,
+-							new CScript(" var autologout = document.getElementById('autologout'); autologout.value = 0; autologout.readOnly=this.checked; autologout.disabled=false;"),
+-							1);
++		$chkbx_autologin = new CCheckBox("autologin", $autologin, new CScript("var autologout_visible = document.getElementById('autologout_visible');
++																				var autologout = document.getElementById('autologout');
++																				if (this.checked) {
++																					if (autologout_visible.checked) {
++																						autologout_visible.checked = false;
++																						autologout_visible.onclick();
++																					}
++																					autologout_visible.disabled = true;
++																				} else {
++																					autologout_visible.disabled = false;
++																				}"), 1);
  		$chkbx_autologin->AddOption('autocomplete','off');
 -		
-+
  		$frmUser->AddRow(S_AUTO_LOGIN,	$chkbx_autologin);
- 		$frmUser->AddRow(S_AUTO_LOGOUT,	array(new CNumericBox("autologout",$autologout,4,$autologin),S_SECONDS));
+-		$frmUser->AddRow(S_AUTO_LOGOUT,	array(new CNumericBox("autologout",$autologout,4,$autologin),S_SECONDS));
++		$frmUser->AddRow(S_AUTO_LOGOUT, array(new CVisibilityBox('autologout_visible', (isset($autologout) && $autologout != 0) ? 'yes' : 'no', 'autologout', S_DISABLED), new CNumericBox("autologout", $autologout, 4)));
  		$frmUser->AddRow(S_URL_AFTER_LOGIN,	new CTextBox("url",$url,50));
-@@ -912,7 +906,7 @@
+ 		$frmUser->AddRow(S_SCREEN_REFRESH,	new CNumericBox("refresh",$refresh,4));
+ 
++
+ 		if(0 == $profile){
+ 			$frmUser->AddVar('perm_details', $perm_details);
+ 
+@@ -912,7 +920,7 @@
  
  				$user_rights = array();
  				foreach($tmp_perm as $id => $perm){
@@ -8770,7 +8868,7 @@ index 366e6c1..4bb57c6 100644
  						'id'		=> $id,
  						'permission'	=> $perm
  						));
-@@ -929,7 +923,7 @@
+@@ -929,7 +937,7 @@
  			$delete_b = new CButtonDelete("Delete selected user?",url_param("form").url_param("config").url_param("userid"));
  			if(bccomp($USER_DETAILS['userid'],$userid) == 0){
  				$delete_b->AddOption('disabled','disabled');
@@ -8779,7 +8877,7 @@ index 366e6c1..4bb57c6 100644
  
  			$frmUser->AddItemToBottomRow($delete_b);
  		}
-@@ -941,9 +935,9 @@
+@@ -941,9 +949,9 @@
  	# Insert form for User Groups
  	function insert_usergroups_form(){
  		global  $USER_DETAILS;
@@ -8791,7 +8889,7 @@ index 366e6c1..4bb57c6 100644
  		$frm_title = S_USER_GROUP;
  		if(isset($_REQUEST["usrgrpid"])){
  			$usrgrp		= get_group_by_usrgrpid($_REQUEST["usrgrpid"]);
-@@ -955,7 +949,7 @@
+@@ -955,7 +963,7 @@
  
  			$users_status = $usrgrp['users_status'];
  			$gui_access = $usrgrp['gui_access'];
@@ -8800,7 +8898,7 @@ index 366e6c1..4bb57c6 100644
  			$group_users = array();
  			$db_users=DBselect('SELECT DISTINCT u.userid,u.alias '.
  						' FROM users u,users_groups ug '.
-@@ -966,13 +960,13 @@
+@@ -966,13 +974,13 @@
  			while($db_user=DBfetch($db_users))
  				$group_users[$db_user["userid"]] = $db_user['alias'];
  
@@ -8816,7 +8914,7 @@ index 366e6c1..4bb57c6 100644
  			$db_rights = DBselect($sql);
  			while($db_right = DBfetch($db_rights)){
  				if(isset($db_right['node_name']))
-@@ -1002,7 +996,7 @@
+@@ -1002,7 +1010,7 @@
  		if(isset($_REQUEST["usrgrpid"])){
  			$frmUserG->AddVar("usrgrpid",$_REQUEST["usrgrpid"]);
  		}
@@ -8825,7 +8923,7 @@ index 366e6c1..4bb57c6 100644
  		$grName = new CTextBox("gname",$name,49);
  		$grName->options['style'] = 'width: 280px';
  		$frmUserG->AddRow(S_GROUP_NAME,$grName);
-@@ -1018,33 +1012,33 @@
+@@ -1018,33 +1026,33 @@
  			$lstUsers->AddItem($userid,	$alias);
  		}
  
@@ -8869,7 +8967,7 @@ index 366e6c1..4bb57c6 100644
  			$frmUserG->AddRow(S_USERS_STATUS, $cmbStat);
  
  		}
-@@ -1055,7 +1049,7 @@
+@@ -1055,7 +1063,7 @@
  			$frmUserG->AddVar('users_status',GROUP_STATUS_ENABLED);
  			$frmUserG->AddRow(S_USERS_STATUS, new CSpan(S_ENABLED,'green'));
  		}
@@ -8878,7 +8976,7 @@ index 366e6c1..4bb57c6 100644
  		$table_Rights = new CTable(S_NO_RIGHTS_DEFINED,'right_table');
  
  		$lstWrite = new CListBox('right_to_del[read_write][]'	,null	,20);
-@@ -1142,7 +1136,7 @@
+@@ -1142,7 +1150,7 @@
  		$lst['group']['deny']		= new CListBox('groups_deny'	,null	,15);
  
  		$groups = get_accessible_groups_by_rights($rights, $user_type, PERM_DENY, PERM_RES_DATA_ARRAY, get_current_nodeid(true));
@@ -8887,7 +8985,7 @@ index 366e6c1..4bb57c6 100644
  		foreach($groups as $group){
  			switch($group['permission']){
  				case PERM_READ_ONLY:
-@@ -1157,7 +1151,7 @@
+@@ -1157,7 +1165,7 @@
  			$lst['group'][$list_name]->AddItem($group['groupid'],$group['node_name'].':'.$group['name']);
  		}
  		unset($groups);
@@ -8896,7 +8994,7 @@ index 366e6c1..4bb57c6 100644
  		$lst['host']['label']		= S_HOSTS;
  		$lst['host']['read_write']	= new CListBox('hosts_write'	,null	,15);
  		$lst['host']['read_only']	= new CListBox('hosts_read'	,null	,15);
-@@ -1174,7 +1168,7 @@
+@@ -1174,7 +1182,7 @@
  			$lst['host'][$list_name]->AddItem($host['hostid'],$host['node_name'].':'.$host['host']);
  		}
  		unset($hosts);
@@ -8905,7 +9003,7 @@ index 366e6c1..4bb57c6 100644
  		foreach($lst as $name => $lists){
  			$row = new CRow();
  			foreach($lists as $class => $list_obj){
-@@ -1190,7 +1184,7 @@
+@@ -1190,7 +1198,7 @@
  	function get_item_filter_form(){
  
  		$selection_mode					= $_REQUEST['selection_mode'];
@@ -8914,7 +9012,7 @@ index 366e6c1..4bb57c6 100644
  		$filter_node					= $_REQUEST['filter_node'];
  		$filter_group					= $_REQUEST['filter_group'];
  		$filter_host					= $_REQUEST['filter_host'];
-@@ -1217,19 +1211,19 @@
+@@ -1217,19 +1225,19 @@
  		$filter_trapper_hosts			= $_REQUEST['filter_trapper_hosts'];
  
  		$form = new CFormTable(S_ITEM.' '.S_FILTER);
@@ -8939,7 +9037,7 @@ index 366e6c1..4bb57c6 100644
  		$form->AddRow(S_SELECTION_MODE,$modeLink);
  
  		if(ZBX_DISTRIBUTED && $selection_mode){
-@@ -1320,7 +1314,7 @@
+@@ -1320,7 +1328,7 @@
  			$cmbValType->AddItem(ITEM_VALUE_TYPE_LOG, 	S_LOG);
  			$cmbValType->AddItem(ITEM_VALUE_TYPE_TEXT,	S_TEXT);
  			$form->AddRow(array('with ',bold(S_TYPE_OF_INFORMATION)),$cmbValType);
@@ -8948,7 +9046,7 @@ index 366e6c1..4bb57c6 100644
  			if( ($filter_value_type==ITEM_VALUE_TYPE_FLOAT) || ($filter_value_type==ITEM_VALUE_TYPE_UINT64))
  			{
  				$form->AddRow(array('with ',bold(S_UNITS)), new CTextBox("filter_units",$filter_units,40));
-@@ -1358,7 +1352,7 @@
+@@ -1358,7 +1366,7 @@
  				$cmbDelta->AddItem(2,S_DELTA_SIMPLE_CHANGE);
  				$form->AddRow(array('with ',bold(S_STORE_VALUE)),$cmbDelta);
  			}
@@ -8957,7 +9055,7 @@ index 366e6c1..4bb57c6 100644
  			if($filter_type==ITEM_TYPE_TRAPPER)
  			{
  				$form->AddRow(array('with ',bold(S_ALLOWED_HOSTS),' like'), new CTextBox("filter_trapper_hosts",$filter_trapper_hosts,40));
-@@ -1368,10 +1362,10 @@
+@@ -1368,10 +1376,10 @@
  		$reset = new CButton("filter_rst",S_RESET);
  		$reset->SetType('button');
  		$reset->SetAction('javascript: var uri = new url(location.href); uri.setArgument("filter_rst",1); location.href = uri.getUrl();');
@@ -8970,7 +9068,7 @@ index 366e6c1..4bb57c6 100644
  	return $form;
  	}
  
-@@ -1383,7 +1377,8 @@
+@@ -1383,7 +1391,8 @@
  		$frmItem->SetHelp('web.items.item.php');
  
  		$frmItem->AddVar('config',get_request('config',0));
@@ -8980,7 +9078,7 @@ index 366e6c1..4bb57c6 100644
  
  		$frmItem->AddVar('hostid',$_REQUEST['hostid']);
  		$frmItem->AddVar('applications_visible',1);
-@@ -1461,7 +1456,7 @@
+@@ -1461,7 +1470,7 @@
  			$multiplier		= $item_data['multiplier'];
  			$hostid			= $item_data['hostid'];
  			$params			= $item_data['params'];
@@ -8989,7 +9087,7 @@ index 366e6c1..4bb57c6 100644
  			$snmpv3_securityname	= $item_data['snmpv3_securityname'];
  			$snmpv3_securitylevel	= $item_data['snmpv3_securitylevel'];
  			$snmpv3_authpassphrase	= $item_data['snmpv3_authpassphrase'];
-@@ -1481,7 +1476,7 @@
+@@ -1481,7 +1490,7 @@
  				$delta		= $item_data['delta'];
  				$trends		= $item_data['trends'];
  				$db_delay_flex	= $item_data['delay_flex'];
@@ -8998,7 +9096,7 @@ index 366e6c1..4bb57c6 100644
  				if(isset($db_delay_flex)){
  					$arr_of_dellays = explode(';',$db_delay_flex);
  					foreach($arr_of_dellays as $one_db_delay){
-@@ -1491,7 +1486,7 @@
+@@ -1491,7 +1500,7 @@
  						array_push($delay_flex,array('delay'=>$arr_of_delay[0],'period'=>$arr_of_delay[1]));
  					}
  				}
@@ -9007,7 +9105,7 @@ index 366e6c1..4bb57c6 100644
  				$applications = array_unique(array_merge($applications, get_applications_by_itemid($_REQUEST['itemid'])));
  			}
  		}
-@@ -1530,7 +1525,7 @@
+@@ -1530,7 +1539,7 @@
  
  		if(isset($_REQUEST['itemid'])) {
  			$frmItem->SetTitle(S_ITEM." '$host:".$item_data["description"]."'");
@@ -9016,7 +9114,7 @@ index 366e6c1..4bb57c6 100644
  		else {
  			$frmItem->SetTitle(S_ITEM." '$host:$description'");
  		}
-@@ -1550,7 +1545,7 @@
+@@ -1550,7 +1559,7 @@
  			$frmItem->AddRow(S_TYPE, $cmbType);
  		}
  
@@ -9025,7 +9123,7 @@ index 366e6c1..4bb57c6 100644
  			$frmItem->AddVar('snmpv3_securityname',$snmpv3_securityname);
  			$frmItem->AddVar('snmpv3_securitylevel',$snmpv3_securitylevel);
  			$frmItem->AddVar('snmpv3_authpassphrase',$snmpv3_authpassphrase);
-@@ -1575,7 +1570,7 @@
+@@ -1575,7 +1584,7 @@
  					case ITEM_SNMPV3_SECURITYLEVEL_AUTHNOPRIV:	$snmpv3_securitylevel = 'AuthNoPriv';	break;
  					case ITEM_SNMPV3_SECURITYLEVEL_AUTHPRIV:	$snmpv3_securitylevel = 'AuthPriv';	break;
  				}
@@ -9034,7 +9132,7 @@ index 366e6c1..4bb57c6 100644
  					$snmpv3_securitylevel, $limited));
  			}
  			else{
-@@ -1621,7 +1616,7 @@
+@@ -1621,7 +1630,7 @@
  				"&dstfld1=key&srctbl=help_items&srcfld1=key_&itemtype=".$type."');",
  				'T');
  		}
@@ -9043,7 +9141,7 @@ index 366e6c1..4bb57c6 100644
  		$frmItem->AddRow(S_KEY, array(new CTextBox('key',$key,40,$limited), $btnSelect));
  
  		if( ITEM_TYPE_DB_MONITOR == $type ){
-@@ -1644,7 +1639,7 @@
+@@ -1644,7 +1653,7 @@
  			$cmbValType->AddItem(ITEM_VALUE_TYPE_TEXT,	S_TEXT);
  		}
  		$frmItem->AddRow(S_TYPE_OF_INFORMATION,$cmbValType);
@@ -9052,7 +9150,7 @@ index 366e6c1..4bb57c6 100644
  		if( ($value_type==ITEM_VALUE_TYPE_FLOAT) || ($value_type==ITEM_VALUE_TYPE_UINT64)){
  			$frmItem->AddRow(S_UNITS, new CTextBox('units',$units,40, $limited));
  
-@@ -1658,7 +1653,7 @@
+@@ -1658,7 +1667,7 @@
  				$cmbMultipler->AddItem(1,S_CUSTOM_MULTIPLIER);
  			}
  			$frmItem->AddRow(S_USE_MULTIPLIER, $cmbMultipler);
@@ -9061,7 +9159,7 @@ index 366e6c1..4bb57c6 100644
  		}
  		else{
  			$frmItem->AddVar('units',$units);
-@@ -1675,10 +1670,10 @@
+@@ -1675,10 +1684,10 @@
  		if($type != ITEM_TYPE_TRAPPER && $type != ITEM_TYPE_HTTPTEST){
  			$frmItem->AddRow(S_UPDATE_INTERVAL_IN_SEC, new CNumericBox('delay',$delay,5));
  			$frmItem->AddRow(S_FLEXIBLE_INTERVALS, $delay_flex_el);
@@ -9074,7 +9172,7 @@ index 366e6c1..4bb57c6 100644
  					S_PERIOD, SPACE,
  					new CTextBox('new_delay_flex[period]','1-7,00:00-23:59',27), BR(),
  					new CButton('add_delay_flex',S_ADD)
-@@ -1694,7 +1689,7 @@
+@@ -1694,7 +1703,7 @@
  			(!isset($_REQUEST['itemid'])) ? null :
  				new CButtonQMessage('del_history',S_CLEAN_HISTORY,S_HISTORY_CLEANING_CAN_TAKE_A_LONG_TIME_CONTINUE_Q)
  			));
@@ -9083,7 +9181,7 @@ index 366e6c1..4bb57c6 100644
  		if(uint_in_array($value_type, array(ITEM_VALUE_TYPE_FLOAT, ITEM_VALUE_TYPE_UINT64)))
  			$frmItem->addRow(S_KEEP_TRENDS_IN_DAYS, new CNumericBox('trends',$trends,8));
  		else
-@@ -1722,7 +1717,7 @@
+@@ -1722,7 +1731,7 @@
  		else{
  			$frmItem->AddVar('delta',0);
  		}
@@ -9092,7 +9190,7 @@ index 366e6c1..4bb57c6 100644
  		if(($value_type==ITEM_VALUE_TYPE_UINT64) || ($value_type == ITEM_VALUE_TYPE_STR)){
  			if(isset($limited) && $type != ITEM_TYPE_HTTPTEST){
  				$frmItem->AddVar('valuemapid', $valuemapid);
-@@ -1742,11 +1737,11 @@
+@@ -1742,11 +1751,11 @@
  						get_node_name_by_elid($db_valuemap['valuemapid']).$db_valuemap['name']
  						);
  			}
@@ -9106,7 +9204,7 @@ index 366e6c1..4bb57c6 100644
  		}
  		else{
  			$frmItem->AddVar('valuemapid',0);
-@@ -1766,10 +1761,10 @@
+@@ -1766,10 +1775,10 @@
  			$frmItem->AddVar('applications',$applications,6);
  		}
  		else{
@@ -9119,7 +9217,7 @@ index 366e6c1..4bb57c6 100644
  			$cmbApps = new CListBox('applications[]',$applications,6);
  			$cmbApps->AddItem(0,'-'.S_NONE.'-');
  			$db_applications = DBselect('SELECT DISTINCT applicationid,name '.
-@@ -1803,7 +1798,7 @@
+@@ -1803,7 +1812,7 @@
  
  		$frmItem->AddSpanRow($frmRow,'form_row_last');
  
@@ -9128,7 +9226,7 @@ index 366e6c1..4bb57c6 100644
  
  			$available_groups = get_accessible_groups_by_user($USER_DETAILS,PERM_READ_ONLY);
  	        $groups=DBselect('SELECT DISTINCT groupid,name '.
-@@ -1842,7 +1837,7 @@
+@@ -1842,7 +1851,7 @@
  
  		$frmItem->AddVar('group_itemid',get_request('group_itemid',array()));
  		$frmItem->AddVar('config',get_request('config',0));
@@ -9137,7 +9235,7 @@ index 366e6c1..4bb57c6 100644
  			$frmItem->AddVar('groupid',$_REQUEST['groupid']);
  
  		$frmItem->AddVar('hostid',$_REQUEST['hostid']);
-@@ -1927,7 +1922,7 @@
+@@ -1927,7 +1936,7 @@
  		$cmbSecLevel->AddItem(ITEM_SNMPV3_SECURITYLEVEL_AUTHPRIV,"AuthPriv");
  		$frmItem->AddRow(array( new CVisibilityBox('securitylevel_visible',  get_request('securitylevel_visible'), 'snmpv3_securitylevel',
  			S_ORIGINAL), S_SNMPV3_SECURITY_LEVEL), $cmbSecLevel);
@@ -9146,7 +9244,7 @@ index 366e6c1..4bb57c6 100644
  			'snmpv3_authpassphrase', S_ORIGINAL), S_SNMPV3_AUTH_PASSPHRASE),
  			new CTextBox('snmpv3_authpassphrase',$snmpv3_authpassphrase,64));
  
-@@ -1945,7 +1940,7 @@
+@@ -1945,7 +1954,7 @@
  		$cmbValType->AddItem(ITEM_VALUE_TYPE_TEXT,	S_TEXT);
  		$frmItem->AddRow(array( new CVisibilityBox('value_type_visible', get_request('value_type_visible'), 'value_type', S_ORIGINAL),
  			S_TYPE_OF_INFORMATION), $cmbValType);
@@ -9155,7 +9253,7 @@ index 366e6c1..4bb57c6 100644
  		$frmItem->AddRow(array( new CVisibilityBox('units_visible', get_request('units_visible'), 'units', S_ORIGINAL), S_UNITS),
  			new CTextBox('units',$units,40));
  
-@@ -1958,16 +1953,16 @@
+@@ -1958,16 +1967,16 @@
  		$delay_flex_el = new CSpan($delay_flex_el);
  		$delay_flex_el->AddOption('id', 'delay_flex_list');
  
@@ -9179,7 +9277,7 @@ index 366e6c1..4bb57c6 100644
  										S_PERIOD, SPACE,
  										new CTextBox("new_delay_flex[period]","1-7,00:00-23:59",27), BR(),
  										new CButton("add_delay_flex",S_ADD)
-@@ -1996,7 +1991,7 @@
+@@ -1996,7 +2005,7 @@
  		$cmbDelta->AddItem(2,S_DELTA_SIMPLE_CHANGE);
  		$frmItem->AddRow(array( new CVisibilityBox('delta_visible', get_request('delta_visible'), 'delta', S_ORIGINAL),
  			S_STORE_VALUE),$cmbDelta);
@@ -9188,7 +9286,7 @@ index 366e6c1..4bb57c6 100644
  		$cmbMap = new CComboBox('valuemapid',$valuemapid);
  		$cmbMap->AddItem(0,S_AS_IS);
  		$db_valuemaps = DBselect('SELECT * FROM valuemaps WHERE '.DBin_node('valuemapid'));
-@@ -2005,19 +2000,19 @@
+@@ -2005,19 +2014,19 @@
  					$db_valuemap["valuemapid"],
  					get_node_name_by_elid($db_valuemap["valuemapid"]).$db_valuemap["name"]
  					);
@@ -9211,7 +9309,7 @@ index 366e6c1..4bb57c6 100644
  		while($db_app = DBfetch($db_applications)){
  			$cmbApps->AddItem($db_app["applicationid"],$db_app["name"]);
  		}
-@@ -2025,13 +2020,13 @@
+@@ -2025,13 +2034,13 @@
  			S_ORIGINAL), S_APPLICATIONS),$cmbApps);
  
  		$frmItem->AddItemToBottomRow(array(new CButton("update",S_UPDATE),
@@ -9227,7 +9325,7 @@ index 366e6c1..4bb57c6 100644
  		$copy_type = get_request("copy_type", 0);
  		$copy_mode = get_request("copy_mode", 0);
  		$filter_groupid = get_request("filter_groupid", 0);
-@@ -2062,24 +2057,25 @@
+@@ -2062,24 +2071,25 @@
  			$cmbGroup->AddItem(0,S_ALL_SMALL);
  			$groups = DBselect($target_sql);
  			while($group = DBfetch($groups)){
@@ -9260,7 +9358,7 @@ index 366e6c1..4bb57c6 100644
  					$target['target_id']),
  				SPACE,
  				$target['target_name'],
-@@ -2087,17 +2083,17 @@
+@@ -2087,17 +2097,17 @@
  				));
  		}
  
@@ -9285,7 +9383,7 @@ index 366e6c1..4bb57c6 100644
  
  		$frmCopy->Show();
  	}
-@@ -2119,7 +2115,7 @@
+@@ -2119,7 +2129,7 @@
  
  		$frmMTrig = new CFormTable($frm_title,'triggers.php');
  		$frmMTrig->AddVar('massupdate',get_request('massupdate',1));
@@ -9294,7 +9392,7 @@ index 366e6c1..4bb57c6 100644
  		$triggers = $_REQUEST['g_triggerid'];
  		foreach($triggers as $id => $triggerid){
  			$frmMTrig->AddVar('g_triggerid['.$triggerid.']',$triggerid);
-@@ -2149,58 +2145,58 @@
+@@ -2149,58 +2159,58 @@
  			$dep_el[] = S_NO_DEPENDENCES_DEFINED;
  		else
  			$dep_el[] = new CButton('del_dependence','delete selected');
@@ -9369,7 +9467,7 @@ index 366e6c1..4bb57c6 100644
  
  			$limited = $trigger['templateid'] ? 'yes' : null;
  		}
-@@ -2228,14 +2224,14 @@
+@@ -2228,14 +2238,14 @@
  							' FROM triggers t,trigger_depends d '.
  							' WHERE t.triggerid=d.triggerid_up '.
  								' AND d.triggerid_down='.$_REQUEST['triggerid']);
@@ -9386,7 +9484,7 @@ index 366e6c1..4bb57c6 100644
  		$frmTrig->AddRow(S_NAME, new CTextBox("description",$description,90, $limited));
  		$frmTrig->AddRow(S_EXPRESSION, array(
  				new CTextBox("expression",$expression,75, $limited),
-@@ -2272,14 +2268,14 @@
+@@ -2272,14 +2282,14 @@
  				"&dstfld1=new_dependence&dstfld2=trigger&srctbl=triggers".
  				"&srcfld1=triggerid&srcfld2=description',600,450);",
  				'T');
@@ -9405,7 +9503,7 @@ index 366e6c1..4bb57c6 100644
  		$type_select = new CComboBox('type');
  		$type_select->Additem(TRIGGER_MULT_EVENT_DISABLED,S_NORMAL,(($type == TRIGGER_MULT_EVENT_ENABLED)?'no':'yes'));
  		$type_select->Additem(TRIGGER_MULT_EVENT_ENABLED,S_NORMAL.SPACE.'+'.SPACE.S_MULTIPLE_TRUE_EVENTS,(($type == TRIGGER_MULT_EVENT_ENABLED)?'yes':'no'));
-@@ -2295,7 +2291,7 @@
+@@ -2295,7 +2305,7 @@
  		$frmTrig->AddRow(S_COMMENTS,new CTextArea("comments",$comments,90,7));
  		$frmTrig->AddRow(S_URL,new CTextBox("url",$url,90));
  		$frmTrig->AddRow(S_DISABLED,new CCheckBox("status",$status));
@@ -9414,7 +9512,7 @@ index 366e6c1..4bb57c6 100644
  		$frmTrig->AddItemToBottomRow(new CButton("save",S_SAVE));
  		if(isset($_REQUEST["triggerid"])){
  			$frmTrig->AddItemToBottomRow(SPACE);
-@@ -2303,17 +2299,17 @@
+@@ -2303,17 +2313,17 @@
  			$frmTrig->AddItemToBottomRow(SPACE);
  			if( !$limited ){
  				$frmTrig->AddItemToBottomRow(new CButtonDelete("Delete trigger?",
@@ -9435,7 +9533,7 @@ index 366e6c1..4bb57c6 100644
  		$trigger = DBfetch(DBselect('SELECT t.*, h.* '.
  			' FROM triggers t, functions f, items i, hosts h '.
  			' WHERE t.triggerid='.$triggerid.
-@@ -2321,7 +2317,7 @@
+@@ -2321,7 +2331,7 @@
  				' AND f.itemid=i.itemid '.
  				' AND i.hostid=h.hostid '));
  
@@ -9444,7 +9542,7 @@ index 366e6c1..4bb57c6 100644
  		$frmComent->SetHelp("web.tr_comments.comments.php");
  		$frmComent->AddVar("triggerid",$triggerid);
  		$frmComent->AddRow(S_COMMENTS,new CTextArea("comments",$trigger["comments"],100,25));
-@@ -2377,11 +2373,11 @@
+@@ -2377,11 +2387,11 @@
  						'periods_cnt'	=> $item['periods_cnt']
  					));
  			}
@@ -9458,7 +9556,7 @@ index 366e6c1..4bb57c6 100644
  			if(($graphtype == GRAPH_TYPE_PIE) || ($graphtype == GRAPH_TYPE_EXPLODED)){
  				$width		= get_request('width'		,400);
  				$height		= get_request('height'		,300);
-@@ -2390,7 +2386,7 @@
+@@ -2390,7 +2400,7 @@
  				$width		= get_request('width'		,900);
  				$height		= get_request('height'		,200);
  			}
@@ -9467,7 +9565,7 @@ index 366e6c1..4bb57c6 100644
  			$yaxistype	= get_request('yaxistype'	,GRAPH_YAXIS_TYPE_CALCULATED);
  			$yaxismin	= get_request('yaxismin'	,0.00);
  			$yaxismax	= get_request('yaxismax'	,100.00);
-@@ -2398,11 +2394,11 @@
+@@ -2398,11 +2408,11 @@
  			$showtriggers	= get_request('showtriggers'	,0);
  			$legend		= get_request('legend'	,0);
  			$graph3d	= get_request('graph3d'	,0);
@@ -9481,7 +9579,7 @@ index 366e6c1..4bb57c6 100644
  			if(isset($visible['percent_left'])) 	$percent_left  = get_request('percent_left', 0);
  			if(isset($visible['percent_right']))	$percent_right = get_request('percent_right', 0);
  		}
-@@ -2434,13 +2430,13 @@
+@@ -2434,13 +2444,13 @@
  		asort_by_key($items, 'sortorder');
  
  		$group_gid = get_request('group_gid', array());
@@ -9498,7 +9596,7 @@ index 366e6c1..4bb57c6 100644
  		$g_height = new CNumericBox('height',$height,5);
  		$g_height->Addoption('onblur','javascript: submit();');
  		$frmGraph->AddRow(S_HEIGHT,$g_height);
-@@ -2452,7 +2448,7 @@
+@@ -2452,7 +2462,7 @@
  		$cmbGType->AddItem(GRAPH_TYPE_EXPLODED,S_EXPLODED);
  
  		zbx_add_post_js('graphs.graphtype = '.$graphtype.";\n");
@@ -9507,7 +9605,7 @@ index 366e6c1..4bb57c6 100644
  		$frmGraph->AddRow(S_GRAPH_TYPE,$cmbGType);
  
  		if(($graphtype == GRAPH_TYPE_NORMAL) || ($graphtype == GRAPH_TYPE_STACKED)){
-@@ -2462,23 +2458,23 @@
+@@ -2462,23 +2472,23 @@
  			if($graphtype == GRAPH_TYPE_NORMAL){
  				$percent_left = sprintf("%2.2f",$percent_left);
  				$percent_right = sprintf("%2.2f",$percent_right);
@@ -9537,7 +9635,7 @@ index 366e6c1..4bb57c6 100644
  				$frmGraph->AddRow(S_PERCENTILE_LINE.' ('.S_RIGHT.')',array($pr_right_chkbx,$pr_right_input));
  			}
  
-@@ -2496,8 +2492,8 @@
+@@ -2496,8 +2506,8 @@
  			else{
  				$frmGraph->AddVar('yaxismin',$yaxismin);
  				$frmGraph->AddVar('yaxismax',$yaxismax);
@@ -9548,7 +9646,7 @@ index 366e6c1..4bb57c6 100644
  		else {
  			$frmGraph->AddRow(S_3D_VIEW,new CCheckBox('graph3d',$graph3d,'javascript: graphs.submit(this);',1));
  			$frmGraph->AddRow(S_LEGEND,new CCheckBox('legend',$legend,'javascript: graphs.submit(this);',1));
-@@ -2589,45 +2585,44 @@
+@@ -2589,45 +2599,44 @@
  			$frmGraph->AddItemToBottomRow(new CButton("clone",S_CLONE));
  			$frmGraph->AddItemToBottomRow(SPACE);
  			$frmGraph->AddItemToBottomRow(new CButtonDelete(S_DELETE_GRAPH_Q,url_param("graphid").
@@ -9616,7 +9714,7 @@ index 366e6c1..4bb57c6 100644
  		$frmGItem->AddVar('graphid',$graphid);
  		$frmGItem->AddVar('gid',$gid);
  		$frmGItem->AddVar('list_name',$list_name);
-@@ -2637,12 +2632,12 @@
+@@ -2637,12 +2646,12 @@
  
  		$txtCondVal = new CTextBox('description',$description,50,'yes');
  
@@ -9632,7 +9730,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		$btnSelect = new CButton('btn1',S_SELECT,
-@@ -2650,94 +2645,91 @@
+@@ -2650,94 +2659,91 @@
  				"&dstfld1=itemid&dstfld2=description&".
  				"srctbl=items&srcfld1=itemid&srcfld2=description".$host_condition."');",
  				'T');
@@ -9760,7 +9858,7 @@ index 366e6c1..4bb57c6 100644
  
  		$frmValmap = new CFormTable(S_VALUE_MAP);
  		$frmValmap->SetHelp("web.mapping.php");
-@@ -2750,7 +2742,7 @@
+@@ -2750,7 +2756,7 @@
  
  			$db_valuemap = DBfetch($db_valuemaps);
  
@@ -9769,7 +9867,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		if(isset($_REQUEST["valuemapid"]) && !isset($_REQUEST["form_refresh"])){
-@@ -2764,7 +2756,7 @@
+@@ -2764,7 +2770,7 @@
  					"newvalue" => $mapping["newvalue"]);
  
  				array_push($valuemap, $value);
@@ -9778,7 +9876,7 @@ index 366e6c1..4bb57c6 100644
  		}
  		else{
  			$mapname = get_request("mapname","");
-@@ -2805,54 +2797,54 @@
+@@ -2805,54 +2811,54 @@
  			$frmValmap->AddItemToBottomRow(SPACE);
  			$frmValmap->AddItemToBottomRow(new CButtonDelete("Delete selected value mapping?",
  				url_param("form").url_param("valuemapid").url_param("config")));
@@ -9846,7 +9944,7 @@ index 366e6c1..4bb57c6 100644
  			if(!$esc_period) unset($_REQUEST['escalation']);
  		}
  
-@@ -2864,11 +2856,11 @@
+@@ -2864,11 +2870,11 @@
  		$cmbSource->AddItem(EVENT_SOURCE_TRIGGERS, S_TRIGGERS);
  		$cmbSource->AddItem(EVENT_SOURCE_DISCOVERY, S_DISCOVERY);
  		$tblAct->AddRow(array(S_EVENT_SOURCE, $cmbSource));
@@ -9861,7 +9959,7 @@ index 366e6c1..4bb57c6 100644
  			if(isset($_REQUEST['escalation'])){
  				$tblAct->AddRow(array(S_PERIOD.' ('.S_SECONDS_SMALL.')', array(new CNumericBox('esc_period', $esc_period, 6, 'no'), '['.S_MIN_SMALL.' 60]')));
  			}
-@@ -2879,15 +2871,15 @@
+@@ -2879,15 +2885,15 @@
  		else{
  			$tblAct->AddItem(new CVar('esc_period',$esc_period));
  		}
@@ -9880,7 +9978,7 @@ index 366e6c1..4bb57c6 100644
  			$tblAct->AddRow(array(S_RECOVERY_MESSAGE, new CCheckBox('recovery_msg',$recovery_msg,'javascript: submit();',1)));
  			if($recovery_msg){
  				$tblAct->AddRow(array(S_RECOVERY_SUBJECT, new CTextBox('r_shortdata', $r_shortdata, 50)));
-@@ -2901,7 +2893,7 @@
+@@ -2901,7 +2907,7 @@
  		else{
  			unset($_REQUEST['recovery_msg']);
  		}
@@ -9889,7 +9987,7 @@ index 366e6c1..4bb57c6 100644
  		$cmbStatus = new CComboBox('status',$status);
  		$cmbStatus->AddItem(ACTION_STATUS_ENABLED,S_ENABLED);
  		$cmbStatus->AddItem(ACTION_STATUS_DISABLED,S_DISABLED);
-@@ -2922,11 +2914,11 @@
+@@ -2922,11 +2928,11 @@
  			$td->AddItem(new CButtonDelete(S_DELETE_SELECTED_ACTION_Q,
  						url_param('form').url_param('eventsource').
  						url_param('actionid')));
@@ -9903,7 +10001,7 @@ index 366e6c1..4bb57c6 100644
  		$tblAction->SetFooter($td);
  	return $tblAction;
  	}
-@@ -2939,11 +2931,11 @@
+@@ -2939,11 +2945,11 @@
  		}
  
  		$conditions	= get_request('conditions',array());
@@ -9917,7 +10015,7 @@ index 366e6c1..4bb57c6 100644
  			/* prepare conditions */
  			$db_conditions = DBselect('select conditiontype, operator, value FROM conditions'.
  				' WHERE actionid='.$_REQUEST['actionid'].' order by conditiontype,conditionid');
-@@ -2973,7 +2965,7 @@
+@@ -2973,7 +2979,7 @@
  		$grouped_conditions = array();
  		$cond_el = new CTable(S_NO_CONDITIONS_DEFINED);
  		$i=0;
@@ -9926,7 +10024,7 @@ index 366e6c1..4bb57c6 100644
  		foreach($conditions as $id => $val){
  			if( !isset($val['type']) )	$val['type'] = 0;
  			if( !isset($val['operator']) )	$val['operator'] = 0;
-@@ -2986,7 +2978,7 @@
+@@ -2986,7 +2992,7 @@
  					new CCheckBox('g_conditionid[]', 'no', null,$i),
  					get_condition_desc($val['type'], $val['operator'], $val['value']))
  				));
@@ -9935,7 +10033,7 @@ index 366e6c1..4bb57c6 100644
  			$tblCond->AddItem(new CVar("conditions[$i][type]", 	$val["type"]));
  			$tblCond->AddItem(new CVar("conditions[$i][operator]", 	$val["operator"]));
  			$tblCond->AddItem(new CVar("conditions[$i][value]", 	$val["value"]));
-@@ -3034,29 +3026,29 @@
+@@ -3034,29 +3040,29 @@
  		else{
  			$tblCond->AddItem(new CVar('evaltype', ACTION_EVAL_TYPE_AND_OR));
  		}
@@ -9971,7 +10069,7 @@ index 366e6c1..4bb57c6 100644
  		if(isset($_REQUEST['actionid']) && !isset($_REQUEST['form_refresh'])){
  			$eventsource	= $action['eventsource'];
  			$evaltype	= $action['evaltype'];
-@@ -3065,7 +3057,7 @@
+@@ -3065,7 +3071,7 @@
  			$evaltype	= get_request('evaltype');
  			$eventsource	= get_request('eventsource');
  		}
@@ -9980,7 +10078,7 @@ index 366e6c1..4bb57c6 100644
  		$allowed_conditions = get_conditions_by_eventsource($eventsource);
  		/* init new_condition variable */
  		$new_condition = get_request('new_condition', array());
-@@ -3077,7 +3069,7 @@
+@@ -3077,7 +3083,7 @@
  
  		if( !str_in_array($new_condition['type'], $allowed_conditions) )
  			$new_condition['type'] = $allowed_conditions[0];
@@ -9989,7 +10087,7 @@ index 366e6c1..4bb57c6 100644
  // NEW CONDITION
  
  		$rowCondition=array();
-@@ -3202,21 +3194,21 @@
+@@ -3202,21 +3208,21 @@
  		}
  
  		$tblCond->AddRow($rowCondition);
@@ -10015,7 +10113,7 @@ index 366e6c1..4bb57c6 100644
  	function get_act_operations_form($action=null){
  		$tblOper = new CTableInfo(S_NO_OPERATIONS_DEFINED);
  		$tblOper->AddOption('style','background-color: #CCC;');
-@@ -3252,7 +3244,7 @@
+@@ -3252,7 +3258,7 @@
  					'esc_step_to'	=> 	$operation_data['esc_step_to'],
  					'default_msg'	=> 	$operation_data['default_msg'],
  					'evaltype'		=> 	$operation_data['evaltype']);
@@ -10024,7 +10122,7 @@ index 366e6c1..4bb57c6 100644
  				$operation_data['opconditions'] = array();
  				$sql = 'SELECT * FROM opconditions WHERE operationid='.$operation_data['operationid'];
  
-@@ -3295,7 +3287,7 @@
+@@ -3295,7 +3301,7 @@
  		$delay = count_operations_delay($operations,$esc_period);
  		foreach($operations as $id => $val){
  			if( !str_in_array($val['operationtype'], $allowed_operations) )	continue;
@@ -10033,7 +10131,7 @@ index 366e6c1..4bb57c6 100644
  			if(!isset($val['default_msg'])) $val['default_msg'] = 0;
  			if(!isset($val['opconditions'])) $val['opconditions'] = array();
  
-@@ -3307,13 +3299,13 @@
+@@ -3307,13 +3313,13 @@
  			$esc_delay_txt = null;
  
  			if($val['esc_step_from'] < 1) $val['esc_step_from'] = 1;
@@ -10049,7 +10147,7 @@ index 366e6c1..4bb57c6 100644
  			$tblOper->AddRow(array(
  				new CCheckBox("g_operationid[]", 'no', null,$id),
  				$esc_steps_txt,
-@@ -3337,12 +3329,12 @@
+@@ -3337,12 +3343,12 @@
  			foreach($val['opconditions'] as $opcondid => $opcond){
  				foreach($opcond as $field => $value)
  					$tblOper->AddItem(new CVar('operations['.$id.'][opconditions]['.$opcondid.']['.$field.']',$value));
@@ -10064,7 +10162,7 @@ index 366e6c1..4bb57c6 100644
  		$oper_buttons = array();
  		if(!isset($_REQUEST['new_operation'])){
  			$oper_buttons[] = new CButton('new_operation',S_NEW);
-@@ -3351,17 +3343,17 @@
+@@ -3351,17 +3357,17 @@
  		if($tblOper->ItemsCount() > 0 ){
  			$oper_buttons[] = new CButton('del_operation',S_DELETE_SELECTED);
  		}
@@ -10085,7 +10183,7 @@ index 366e6c1..4bb57c6 100644
  	function get_act_new_oper_form($action=null){
  		$tblOper = new CTableInfo();
  
-@@ -3370,7 +3362,7 @@
+@@ -3370,7 +3376,7 @@
  		}
  
  		$operations	= get_request("operations",array());
@@ -10094,7 +10192,7 @@ index 366e6c1..4bb57c6 100644
  		if(isset($_REQUEST['actionid']) && !isset($_REQUEST['form_refresh'])){
  			$eventsource	= $action['eventsource'];
  		}
-@@ -3379,7 +3371,7 @@
+@@ -3379,7 +3385,7 @@
  		}
  
  		$allowed_operations = get_operations_by_eventsource($eventsource);
@@ -10103,7 +10201,7 @@ index 366e6c1..4bb57c6 100644
  		/* init new_operation variable */
  		$new_operation = get_request('new_operation', array());
  
-@@ -3396,39 +3388,39 @@
+@@ -3396,39 +3402,39 @@
  		if(!isset($new_operation['esc_step_from']))		$new_operation['esc_step_from'] = 1;
  		if(!isset($new_operation['esc_step_to']))		$new_operation['esc_step_to'] = 1;
  		if(!isset($new_operation['esc_period']))		$new_operation['esc_period'] = 0;
@@ -10152,7 +10250,7 @@ index 366e6c1..4bb57c6 100644
  								new CCol(array(
  									new CNumericBox('new_operation[esc_period]', $new_operation['esc_period'],5),
  									' [0-'.S_DEFAULT.']'))
-@@ -3440,10 +3432,10 @@
+@@ -3440,10 +3446,10 @@
  			$tblOper->AddItem(new CVar('new_operation[esc_period]'	,	$new_operation['esc_period']));
  			$tblOper->AddItem(new CVar('new_operation[esc_step_from]',	$new_operation['esc_step_from']));
  			$tblOper->AddItem(new CVar('new_operation[esc_step_to]',	$new_operation['esc_step_to']));
@@ -10165,7 +10263,7 @@ index 366e6c1..4bb57c6 100644
  		$cmbOpType = new CComboBox('new_operation[operationtype]', $new_operation['operationtype'],'submit()');
  		foreach($allowed_operations as $oper)
  			$cmbOpType->AddItem($oper, operation_type2str($oper));
-@@ -3464,7 +3456,7 @@
+@@ -3464,7 +3470,7 @@
  					$display_name = 'alias';
  				}
  
@@ -10174,7 +10272,7 @@ index 366e6c1..4bb57c6 100644
  
  				if($object_name)	$object_name = $object_name[$display_name];
  
-@@ -3482,9 +3474,9 @@
+@@ -3482,9 +3488,9 @@
  							'",450,450)',
  							'T')
  					)));
@@ -10186,7 +10284,7 @@ index 366e6c1..4bb57c6 100644
  				if(!$new_operation['default_msg']){
  					$tblNewOperation->AddRow(array(S_SUBJECT, new CTextBox('new_operation[shortdata]', $new_operation['shortdata'], 77)));
  					$tblNewOperation->AddRow(array(S_MESSAGE, new CTextArea('new_operation[longdata]', $new_operation['longdata'],77,7)));
-@@ -3593,7 +3585,7 @@
+@@ -3593,7 +3599,7 @@
  							'",450,450)',
  							'T')
  					)));
@@ -10195,7 +10293,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  // new Operation conditions
-@@ -3602,66 +3594,66 @@
+@@ -3602,66 +3608,66 @@
  
  			$opconditions	= $new_operation['opconditions'];
  			$allowed_opconditions = get_opconditions_by_eventsource($eventsource);
@@ -10279,7 +10377,7 @@ index 366e6c1..4bb57c6 100644
  					unset($cmb_calc_type, $group_op, $glog_op);
  					/* end of calcuation type selector */
  				}
-@@ -3673,15 +3665,15 @@
+@@ -3673,15 +3679,15 @@
  			else{
  				$tblCond->AddItem(new CVar('new_operation[evaltype]', ACTION_EVAL_TYPE_AND_OR));
  			}
@@ -10299,7 +10397,7 @@ index 366e6c1..4bb57c6 100644
  		$tblOper->AddRow($tblNewOperation);
  
  
-@@ -3693,19 +3685,19 @@
+@@ -3693,19 +3699,19 @@
  
  		$td->AddOption('colspan','3');
  		$td->AddOption('style','text-align: right;');
@@ -10322,7 +10420,7 @@ index 366e6c1..4bb57c6 100644
  		if(isset($_REQUEST['actionid']) && !isset($_REQUEST['form_refresh'])){
  			$eventsource	= $action['eventsource'];
  			$evaltype	= $action['evaltype'];
-@@ -3714,7 +3706,7 @@
+@@ -3714,7 +3720,7 @@
  			$evaltype	= get_request('evaltype');
  			$eventsource	= get_request('eventsource');
  		}
@@ -10331,7 +10429,7 @@ index 366e6c1..4bb57c6 100644
  		$allowed_conditions = get_opconditions_by_eventsource($eventsource);
  		/* init new_condition variable */
  		$new_opcondition = get_request('new_opcondition', array());
-@@ -3726,7 +3718,7 @@
+@@ -3726,7 +3732,7 @@
  
  		if( !str_in_array($new_opcondition['conditiontype'], $allowed_conditions) )
  			$new_opcondition['conditiontype'] = $allowed_conditions[0];
@@ -10340,7 +10438,7 @@ index 366e6c1..4bb57c6 100644
  // NEW CONDITION
  		$rowCondition=array();
  
-@@ -3755,7 +3747,7 @@
+@@ -3755,7 +3761,7 @@
  		}
  
  		$tblCond->AddRow($rowCondition);
@@ -10349,7 +10447,7 @@ index 366e6c1..4bb57c6 100644
  		$tblConditions = new CTableInfo();
  
  		$tblConditions->AddRow($tblCond);
-@@ -3763,7 +3755,7 @@
+@@ -3763,7 +3769,7 @@
  		$td = new CCol(array(new CButton('add_opcondition',S_ADD),new CButton('cancel_new_opcondition',S_CANCEL)));
  		$td->AddOption('colspan','3');
  		$td->AddOption('style','text-align: right;');
@@ -10358,7 +10456,7 @@ index 366e6c1..4bb57c6 100644
  		$tblConditions->SetFooter($td);
  		unset($grouped_conditions,$cond_el,$cond_buttons);
  // end of NEW CONDITION
-@@ -3870,11 +3862,11 @@
+@@ -3870,11 +3876,11 @@
  		}
  
  		$frmImages->AddRow(S_NAME,new CTextBox('name',$name,64));
@@ -10372,7 +10470,7 @@ index 366e6c1..4bb57c6 100644
  		$frmImages->AddRow(S_TYPE,$cmbImg);
  
  		$frmImages->AddRow(S_UPLOAD,new CFile('image'));
-@@ -3890,7 +3882,7 @@
+@@ -3890,7 +3896,7 @@
  			$frmImages->AddItemToBottomRow(new CButtonDelete(S_DELETE_SELECTED_IMAGE,
  				url_param('form').url_param('config').url_param('imageid')));
  		}
@@ -10381,7 +10479,7 @@ index 366e6c1..4bb57c6 100644
  		$frmImages->AddItemToBottomRow(SPACE);
  		$frmImages->AddItemToBottomRow(new CButtonCancel(url_param('config')));
  		$frmImages->Show();
-@@ -3916,7 +3908,7 @@
+@@ -3916,7 +3922,7 @@
  			$hsize=get_request("hsize",1);
  			$vsize=get_request("bsize",1);
  		}
@@ -10390,7 +10488,7 @@ index 366e6c1..4bb57c6 100644
  		$frmScr = new CFormTable($frm_title,"screenconf.php");
  		$frmScr->SetHelp("web.screenconf.screen.php");
  
-@@ -3939,12 +3931,12 @@
+@@ -3939,12 +3945,12 @@
  		}
  		$frmScr->AddItemToBottomRow(SPACE);
  		$frmScr->AddItemToBottomRow(new CButtonCancel());
@@ -10405,7 +10503,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHouseKeep = new CFormTable(S_HOUSEKEEPER,"config.php");
  		$frmHouseKeep->SetHelp("web.config.housekeeper.php");
  		$frmHouseKeep->AddVar("config",get_request("config",0));
-@@ -3961,7 +3953,7 @@
+@@ -3961,7 +3967,7 @@
  
  	function insert_work_period_form(){
  		$config=select_config();
@@ -10414,7 +10512,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHouseKeep = new CFormTable(S_WORKING_TIME,"config.php");
  		$frmHouseKeep->SetHelp("web.config.workperiod.php");
  		$frmHouseKeep->AddVar("config",get_request("config",7));
-@@ -3972,19 +3964,19 @@
+@@ -3972,19 +3978,19 @@
  		$frmHouseKeep->AddItemToBottomRow(new CButton("save",S_SAVE));
  		$frmHouseKeep->Show();
  	}
@@ -10438,7 +10536,7 @@ index 366e6c1..4bb57c6 100644
  		$frmThemes->AddItemToBottomRow(new CButton("save",S_SAVE));
  		$frmThemes->Show();
  	}
-@@ -3992,7 +3984,7 @@
+@@ -3992,7 +3998,7 @@
  	function insert_event_ack_form()
  	{
  		$config=select_config();
@@ -10447,7 +10545,7 @@ index 366e6c1..4bb57c6 100644
  		$frmEventAck = new CFormTable(S_EVENTS,"config.php");
  //		$frmEventAck->SetHelp("web.config.workperiod.php");
  		$frmEventAck->AddVar("config",get_request("config",8));
-@@ -4003,7 +3995,7 @@
+@@ -4003,7 +4009,7 @@
  		$exp_select->AddItem(EVENT_ACK_DISABLED,S_DISABLED,$config['event_ack_enable']?'no':'yes');
  
  		$frmEventAck->AddRow(S_EVENT_ACKNOWLEDGES,$exp_select);
@@ -10456,7 +10554,7 @@ index 366e6c1..4bb57c6 100644
  		$frmEventAck->AddRow(S_SHOW_EVENTS_NOT_OLDER.SPACE.'('.S_DAYS.')',
  			new CTextBox('event_expire',$config['event_expire'],5));
  
-@@ -4017,11 +4009,11 @@
+@@ -4017,11 +4023,11 @@
  	function	insert_other_parameters_form()
  	{
  		$config=select_config();
@@ -10470,7 +10568,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHouseKeep->AddRow(S_REFRESH_UNSUPPORTED_ITEMS,
  			new CNumericBox('refresh_unsupported',$config['refresh_unsupported'],5));
  
-@@ -4047,7 +4039,7 @@
+@@ -4047,7 +4053,7 @@
  		global $USER_DETAILS;
  
  		$visible = get_request('visible',array());
@@ -10479,7 +10577,7 @@ index 366e6c1..4bb57c6 100644
  		$groups= get_request('groups',array());
  
  		$newgroup	= get_request('newgroup','');
-@@ -4083,9 +4075,9 @@
+@@ -4083,9 +4089,9 @@
  		$notes		= get_request('notes','');
  
  // BEGIN: HOSTS PROFILE EXTENDED Section
@@ -10491,7 +10589,7 @@ index 366e6c1..4bb57c6 100644
  		$ext_profiles_fields = array('device_alias','device_type','device_chassis','device_os','device_os_short',
  			'device_hw_arch','device_serial','device_model','device_tag','device_vendor','device_contract',
  			'device_who','device_status','device_app_01','device_app_02','device_app_03','device_app_04',
-@@ -4099,7 +4091,7 @@
+@@ -4099,7 +4105,7 @@
  		foreach($ext_profiles_fields as $field){
  			if(!isset($ext_host_profiles[$field])) $ext_host_profiles[$field] = '';
  		}
@@ -10500,7 +10598,7 @@ index 366e6c1..4bb57c6 100644
  // END:   HOSTS PROFILE EXTENDED Section
  
  		$templates	= get_request('templates',array());
-@@ -4117,25 +4109,25 @@
+@@ -4117,25 +4123,25 @@
  		$frmHost->SetHelp('web.hosts.host.php');
  		$frmHost->AddVar('config',get_request('config',0));
  		$frmHost->AddVar('massupdate',get_request('massupdate',1));
@@ -10530,7 +10628,7 @@ index 366e6c1..4bb57c6 100644
  		while($db_group=DBfetch($db_groups)){
  			$grp_tb->AddItem($db_group['groupid'],$db_group['name']);
  		}
-@@ -4153,7 +4145,7 @@
+@@ -4153,7 +4159,7 @@
  		$frmHost->AddRow(array(new CVisibilityBox('visible[dns]', isset($visible['dns']), 'dns', S_ORIGINAL),S_DNS_NAME),
  						new CTextBox('dns',$dns,'40')
  					);
@@ -10539,7 +10637,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(new CVisibilityBox('visible[ip]', isset($visible['ip']), 'ip', S_ORIGINAL),S_IP_ADDRESS),
  						new CTextBox('ip',$ip,defined('ZBX_HAVE_IPV6')?39:15)
  					);
-@@ -4161,7 +4153,7 @@
+@@ -4161,7 +4167,7 @@
  		$cmbConnectBy = new CComboBox('useip', $useip);
  		$cmbConnectBy->AddItem(0, S_DNS_NAME);
  		$cmbConnectBy->AddItem(1, S_IP_ADDRESS);
@@ -10548,7 +10646,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(new CVisibilityBox('visible[useip]', isset($visible['useip']), 'useip', S_ORIGINAL),S_CONNECT_TO),
  						$cmbConnectBy
  					);
-@@ -4174,7 +4166,7 @@
+@@ -4174,7 +4180,7 @@
  		$cmbProxy = new CComboBox('proxy_hostid', $proxy_hostid);
  
  		$cmbProxy->AddItem(0, S_NO_PROXY);
@@ -10557,7 +10655,7 @@ index 366e6c1..4bb57c6 100644
  		$sql = 'SELECT hostid,host '.
  				' FROM hosts '.
  				' WHERE status IN ('.HOST_STATUS_PROXY.') '.
-@@ -4194,21 +4186,21 @@
+@@ -4194,21 +4200,21 @@
  		$cmbStatus = new CComboBox('status',$status);
  		$cmbStatus->AddItem(HOST_STATUS_MONITORED,	S_MONITORED);
  		$cmbStatus->AddItem(HOST_STATUS_NOT_MONITORED,	S_NOT_MONITORED);
@@ -10584,7 +10682,7 @@ index 366e6c1..4bb57c6 100644
  		foreach($templates as $id => $temp_name){
  			$frmHost->AddVar('templates['.$id.']',$temp_name);
  			$template_table->AddRow(array(
-@@ -4223,12 +4215,12 @@
+@@ -4223,12 +4229,12 @@
  					"return PopUp('popup.php?dstfrm=".$frmHost->GetName().
  					"&dstfld1=new_template&srctbl=templates&srcfld1=hostid&srcfld2=host".
  					url_param($templates,false,'existed_templates')."',450,450)"));
@@ -10600,7 +10698,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(
  					new CVisibilityBox('visible[useipmi]', isset($visible['useipmi']), 'useipmi', S_ORIGINAL), S_USEIPMI),
  					new CCheckBox("useipmi", $useipmi, "submit()")
-@@ -4298,52 +4290,52 @@
+@@ -4298,52 +4304,52 @@
  				new CVisibilityBox('visible[devicetype]', isset($visible['devicetype']), 'devicetype', S_ORIGINAL),S_DEVICE_TYPE),
  				new CTextBox("devicetype",$devicetype,61)
  			);
@@ -10663,7 +10761,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHost->AddRow(array(
  				new CVisibilityBox('visible[notes]', isset($visible['notes']), 'notes', S_ORIGINAL),S_NOTES),
  				new CTextArea("notes",$notes,60,4)
-@@ -4369,7 +4361,7 @@
+@@ -4369,7 +4375,7 @@
  			new CVisibilityBox('visible[device_alias]', isset($visible['device_alias']), 'ext_host_profiles[device_alias]', S_ORIGINAL),S_DEVICE_ALIAS),
  			new CTextBox('ext_host_profiles[device_alias]',$ext_host_profiles['device_alias'],61)
  		);
@@ -10672,7 +10770,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(
  			new CVisibilityBox('visible[device_type]', isset($visible['device_type']), 'ext_host_profiles[device_type]', S_ORIGINAL),S_DEVICE_TYPE),
  			new CTextBox('ext_host_profiles[device_type]',$ext_host_profiles['device_type'],61)
-@@ -4492,7 +4484,7 @@
+@@ -4492,7 +4498,7 @@
  			new CVisibilityBox('visible[oob_router]', isset($visible['oob_router']), 'ext_host_profiles[oob_router]', S_ORIGINAL),S_OOB_ROUTER),
  			new CTextBox('ext_host_profiles[oob_router]',$ext_host_profiles['oob_router'],61)
  		);
@@ -10681,7 +10779,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(
  			new CVisibilityBox('visible[date_hw_buy]', isset($visible['date_hw_buy']), 'ext_host_profiles[date_hw_buy]', S_ORIGINAL),S_DATE_HW_BUY),
  			new CTextBox('ext_host_profiles[date_hw_buy]',$ext_host_profiles['date_hw_buy'],15)
-@@ -4509,7 +4501,7 @@
+@@ -4509,7 +4515,7 @@
  			new CVisibilityBox('visible[date_hw_decomm]', isset($visible['date_hw_decomm']), 'ext_host_profiles[date_hw_decomm]', S_ORIGINAL),S_DATE_HW_DECOMM),
  			new CTextBox('ext_host_profiles[date_hw_decomm]',$ext_host_profiles['date_hw_decomm'],15)
  		);
@@ -10690,7 +10788,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(array(
  			new CVisibilityBox('visible[site_street_1]', isset($visible['site_street_1']), 'ext_host_profiles[site_street_1]', S_ORIGINAL),S_SITE_STREET_1),
  			new CTextBox('ext_host_profiles[site_street_1]',$ext_host_profiles['site_street_1'],61)
-@@ -4667,9 +4659,9 @@
+@@ -4667,9 +4673,9 @@
  	}
  // END:   HOSTS PROFILE EXTENDED Section
  
@@ -10702,7 +10800,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->Show();
  	}
  
-@@ -4721,7 +4713,7 @@
+@@ -4721,7 +4727,7 @@
  
  		$frm_title	= $show_only_tmp ? S_TEMPLATE : S_HOST;
  
@@ -10711,7 +10809,7 @@ index 366e6c1..4bb57c6 100644
  			$db_host=get_host_by_hostid($_REQUEST['hostid']);
  			$frm_title	.= SPACE.' ['.$db_host['host'].']';
  
-@@ -4730,34 +4722,31 @@
+@@ -4730,34 +4736,31 @@
  		else{
  			$original_templates = array();
  		}
@@ -10754,7 +10852,7 @@ index 366e6c1..4bb57c6 100644
  			$ipmi_port		= $db_host['ipmi_port'];
  			$ipmi_authtype		= $db_host['ipmi_authtype'];
  			$ipmi_privilege		= $db_host['ipmi_privilege'];
-@@ -4798,7 +4787,7 @@
+@@ -4798,7 +4801,7 @@
  
  // BEGIN: HOSTS PROFILE EXTENDED Section
  			$useprofile_ext = 'no';
@@ -10763,7 +10861,7 @@ index 366e6c1..4bb57c6 100644
  			$db_profiles_alt = DBselect('SELECT * FROM hosts_profiles_ext		 WHERE hostid='.$_REQUEST['hostid']);
  			if($ext_host_profiles = DBfetch($db_profiles_alt)){
  				$useprofile_ext = 'yes';
-@@ -4810,7 +4799,7 @@
+@@ -4810,7 +4813,7 @@
  
  			$templates = $original_templates;
  		}
@@ -10772,7 +10870,7 @@ index 366e6c1..4bb57c6 100644
  		$ext_profiles_fields = array('device_alias','device_type','device_chassis','device_os','device_os_short',
  			'device_hw_arch','device_serial','device_model','device_tag','device_vendor','device_contract',
  			'device_who','device_status','device_app_01','device_app_02','device_app_03','device_app_04',
-@@ -4821,7 +4810,7 @@
+@@ -4821,7 +4824,7 @@
  			'poc_1_name','poc_1_email','poc_1_phone_1','poc_1_phone_2','poc_1_cell','poc_1_screen','poc_1_notes','poc_2_name',
  			'poc_2_email','poc_2_phone_1','poc_2_phone_2','poc_2_cell','poc_2_screen','poc_2_notes');
  
@@ -10781,7 +10879,7 @@ index 366e6c1..4bb57c6 100644
  		foreach($ext_profiles_fields as $id => $field){
  			if(!isset($ext_host_profiles[$field])) $ext_host_profiles[$field] = '';
  		}
-@@ -4836,22 +4825,22 @@
+@@ -4836,22 +4839,22 @@
  
  		$frmHost->AddVar('clear_templates',$clear_templates);
  
@@ -10810,7 +10908,7 @@ index 366e6c1..4bb57c6 100644
  		$frmHost->AddRow(S_GROUPS,$grp_tb->Get(S_IN.SPACE.S_GROUPS,S_OTHER.SPACE.S_GROUPS));
  
  		$frmHost->AddRow(S_NEW_GROUP,new CTextBox('newgroup',$newgroup),'new');
-@@ -4885,7 +4874,7 @@
+@@ -4885,7 +4888,7 @@
  			$frmHost->AddVar('status',$status);
  		}
  		else{
@@ -10819,7 +10917,7 @@ index 366e6c1..4bb57c6 100644
  
  //Proxy
  			$cmbProxy = new CComboBox('proxy_hostid', $proxy_hostid);
-@@ -4902,7 +4891,7 @@
+@@ -4902,7 +4905,7 @@
  			$cmbStatus = new CComboBox('status',$status);
  			$cmbStatus->AddItem(HOST_STATUS_MONITORED,	S_MONITORED);
  			$cmbStatus->AddItem(HOST_STATUS_NOT_MONITORED,	S_NOT_MONITORED);
@@ -10828,7 +10926,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		$template_table = new CTable();
-@@ -4939,7 +4928,7 @@
+@@ -4939,7 +4942,7 @@
  				$frmHost->AddRow(S_IPMI_IP_ADDRESS,new CTextBox('ipmi_ip',$ipmi_ip,'39'));
  			else
  				$frmHost->AddRow(S_IPMI_IP_ADDRESS,new CTextBox('ipmi_ip',$ipmi_ip,'15'));
@@ -10837,7 +10935,7 @@ index 366e6c1..4bb57c6 100644
  
  			$cmbIPMIAuthtype = new CComboBox('ipmi_authtype', $ipmi_authtype);
  			$cmbIPMIAuthtype->AddItem(IPMI_AUTHTYPE_DEFAULT,	S_AUTHTYPE_DEFAULT);
-@@ -4949,7 +4938,7 @@
+@@ -4949,7 +4952,7 @@
  			$cmbIPMIAuthtype->AddItem(IPMI_AUTHTYPE_STRAIGHT,	S_AUTHTYPE_STRAIGHT);
  			$cmbIPMIAuthtype->AddItem(IPMI_AUTHTYPE_OEM,		S_AUTHTYPE_OEM);
  			$cmbIPMIAuthtype->AddItem(IPMI_AUTHTYPE_RMCP_PLUS,	S_AUTHTYPE_RMCP_PLUS);
@@ -10846,7 +10944,7 @@ index 366e6c1..4bb57c6 100644
  
  			$cmbIPMIPrivilege = new CComboBox('ipmi_privilege', $ipmi_privilege);
  			$cmbIPMIPrivilege->AddItem(IPMI_PRIVILEGE_CALLBACK,	S_PRIVILEGE_CALLBACK);
-@@ -4957,20 +4946,20 @@
+@@ -4957,20 +4960,20 @@
  			$cmbIPMIPrivilege->AddItem(IPMI_PRIVILEGE_OPERATOR,	S_PRIVILEGE_OPERATOR);
  			$cmbIPMIPrivilege->AddItem(IPMI_PRIVILEGE_ADMIN,	S_PRIVILEGE_ADMIN);
  			$cmbIPMIPrivilege->AddItem(IPMI_PRIVILEGE_OEM,		S_PRIVILEGE_OEM);
@@ -10871,7 +10969,7 @@ index 366e6c1..4bb57c6 100644
  		if($show_only_tmp){
  			$useprofile = 'no';
  			$frmHost->AddVar('useprofile',$useprofile);
-@@ -4981,7 +4970,7 @@
+@@ -4981,7 +4984,7 @@
  			$frmHost->AddRow(S_USE_PROFILE,new CCheckBox('useprofile',$useprofile,'submit()'));
  			$frmHost->AddRow(S_USE_EXTENDED_PROFILE,new CCheckBox('useprofile_ext',$useprofile_ext,'submit()','yes'));
  		}
@@ -10880,7 +10978,7 @@ index 366e6c1..4bb57c6 100644
  		if($useprofile=='yes'){
  			$frmHost->AddRow(S_DEVICE_TYPE,new CTextBox("devicetype",$devicetype,61));
  			$frmHost->AddRow(S_NAME,new CTextBox("name",$name,61));
-@@ -5032,24 +5021,24 @@
+@@ -5032,24 +5035,24 @@
  			$frmHost->AddRow(S_DEVICE_URL_1,new CTextBox('ext_host_profiles[device_url_1]',$ext_host_profiles['device_url_1'],61));
  			$frmHost->AddRow(S_DEVICE_URL_2,new CTextBox('ext_host_profiles[device_url_2]',$ext_host_profiles['device_url_2'],61));
  			$frmHost->AddRow(S_DEVICE_URL_3,new CTextBox('ext_host_profiles[device_url_3]',$ext_host_profiles['device_url_3'],61));
@@ -10909,7 +11007,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHost->AddRow(S_SITE_STREET_1,new CTextBox('ext_host_profiles[site_street_1]',$ext_host_profiles['site_street_1'],61));
  			$frmHost->AddRow(S_SITE_STREET_2,new CTextBox('ext_host_profiles[site_street_2]',$ext_host_profiles['site_street_2'],61));
  			$frmHost->AddRow(S_SITE_STREET_3,new CTextBox('ext_host_profiles[site_street_3]',$ext_host_profiles['site_street_3'],61));
-@@ -5059,7 +5048,7 @@
+@@ -5059,7 +5062,7 @@
  			$frmHost->AddRow(S_SITE_ZIP,new CTextBox('ext_host_profiles[site_zip]',$ext_host_profiles['site_zip'],61));
  			$frmHost->AddRow(S_SITE_RACK,new CTextBox('ext_host_profiles[site_rack]',$ext_host_profiles['site_rack'],61));
  			$frmHost->AddRow(S_SITE_NOTES,new CTextArea('ext_host_profiles[site_notes]',$ext_host_profiles['site_notes'],50,5));
@@ -10918,7 +11016,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHost->AddRow(S_POC_1_NAME,new CTextBox('ext_host_profiles[poc_1_name]',$ext_host_profiles['poc_1_name'],61));
  			$frmHost->AddRow(S_POC_1_EMAIL,new CTextBox('ext_host_profiles[poc_1_email]',$ext_host_profiles['poc_1_email'],61));
  			$frmHost->AddRow(S_POC_1_PHONE_1,new CTextBox('ext_host_profiles[poc_1_phone_1]',$ext_host_profiles['poc_1_phone_1'],61));
-@@ -5067,7 +5056,7 @@
+@@ -5067,7 +5070,7 @@
  			$frmHost->AddRow(S_POC_1_CELL,new CTextBox('ext_host_profiles[poc_1_cell]',$ext_host_profiles['poc_1_cell'],61));
  			$frmHost->AddRow(S_POC_1_SCREEN,new CTextBox('ext_host_profiles[poc_1_screen]',$ext_host_profiles['poc_1_screen'],61));
  			$frmHost->AddRow(S_POC_1_NOTES,new CTextArea('ext_host_profiles[poc_1_notes]',$ext_host_profiles['poc_1_notes'],50,5));
@@ -10927,7 +11025,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHost->AddRow(S_POC_2_NAME,new CTextBox('ext_host_profiles[poc_2_name]',$ext_host_profiles['poc_2_name'],61));
  			$frmHost->AddRow(S_POC_2_EMAIL,new CTextBox('ext_host_profiles[poc_2_email]',$ext_host_profiles['poc_2_email'],61));
  			$frmHost->AddRow(S_POC_2_PHONE_1,new CTextBox('ext_host_profiles[poc_2_phone_1]',$ext_host_profiles['poc_2_phone_1'],61));
-@@ -5143,7 +5132,7 @@
+@@ -5143,7 +5146,7 @@
  // Host items
  			$items_lbx = new CListBox('items',null,8);
  			$items_lbx->AddOption('disabled','disabled');
@@ -10936,7 +11034,7 @@ index 366e6c1..4bb57c6 100644
  			$sql = 'SELECT * '.
  					' FROM items '.
  					' WHERE hostid='.$_REQUEST['hostid'].
-@@ -5154,13 +5143,13 @@
+@@ -5154,13 +5157,13 @@
  				$item_description = item_description($host_item);
  				$items_lbx->AddItem($host_item['itemid'],$item_description);
  			}
@@ -10954,7 +11052,7 @@ index 366e6c1..4bb57c6 100644
  			$trig_lbx = new CListBox('triggers',null,8);
  			$trig_lbx->AddOption('disabled','disabled');
  
-@@ -5172,19 +5161,19 @@
+@@ -5172,19 +5175,19 @@
  						' AND '.DBcondition('t.triggerid', $available_triggers).
  						' AND t.templateid=0 '.
  					' ORDER BY t.description';
@@ -10979,7 +11077,7 @@ index 366e6c1..4bb57c6 100644
  			$graphs_lbx = new CListBox('graphs',null,8);
  			$graphs_lbx->AddOption('disabled','disabled');
  
-@@ -5197,29 +5186,29 @@
+@@ -5197,29 +5200,29 @@
  							' AND i.itemid=gi.itemid '.
  							' AND i.hostid='.$_REQUEST['hostid'].
  						' ORDER BY g.name';
@@ -11016,7 +11114,7 @@ index 366e6c1..4bb57c6 100644
  				));
  
  			if($show_only_tmp){
-@@ -5229,29 +5218,29 @@
+@@ -5229,29 +5232,29 @@
  						'Delete AND clear',
  						S_DELETE_SELECTED_HOSTS_Q,
  						url_param("form").url_param("config").url_param("hostid").
@@ -11054,7 +11152,7 @@ index 366e6c1..4bb57c6 100644
  			$name=$group["name"];
  			$db_hosts=DBselect('SELECT DISTINCT h.hostid,host '.
  					' FROM hosts h, hosts_groups hg '.
-@@ -5260,20 +5249,20 @@
+@@ -5260,20 +5263,20 @@
  						' AND hg.groupid='.$_REQUEST['groupid'].
  					' ORDER BY host');
  			while($db_host=DBfetch($db_hosts)){
@@ -11081,7 +11179,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		$frmHostG->AddRow(S_GROUP_NAME,new CTextBox("gname",$name,48));
-@@ -5284,23 +5273,23 @@
+@@ -5284,23 +5287,23 @@
  				' WHERE status in ('.HOST_STATUS_MONITORED.','.HOST_STATUS_NOT_MONITORED.','.HOST_STATUS_TEMPLATE.')'.
  					' AND '.DBcondition('hostid',$available_hosts).
  				' ORDER BY host');
@@ -11109,7 +11207,7 @@ index 366e6c1..4bb57c6 100644
  				)
  			);
  		}
-@@ -5313,35 +5302,35 @@
+@@ -5313,35 +5316,35 @@
  	function	insert_proxies_form(){
  		global	$USER_DETAILS;
  		$available_hosts = get_accessible_hosts_by_user($USER_DETAILS,PERM_READ_ONLY,PERM_RES_IDS_ARRAY);
@@ -11157,7 +11255,7 @@ index 366e6c1..4bb57c6 100644
  		}
  
  		$frmHostG->AddRow(S_PROXY_NAME,new CTextBox("host",$name,30));
-@@ -5353,15 +5342,15 @@
+@@ -5353,15 +5356,15 @@
  								' AND '.DBcondition('hostid',$available_hosts).
  							' ORDER BY host');
  		while($db_host=DBfetch($db_hosts)){
@@ -11177,7 +11275,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHostG->AddItemToBottomRow(SPACE);
  			$frmHostG->AddItemToBottomRow(new CButton("clone",S_CLONE));
  			$frmHostG->AddItemToBottomRow(SPACE);
-@@ -5382,7 +5371,7 @@
+@@ -5382,7 +5385,7 @@
  		$frmHostP = new CFormTable(S_HOST_PROFILE);
  		$frmHostP->SetHelp("web.host_profile.php");
  
@@ -11186,7 +11284,7 @@ index 366e6c1..4bb57c6 100644
  
  		$row=DBfetch($result);
  		if($row){
-@@ -5413,10 +5402,10 @@
+@@ -5413,10 +5416,10 @@
  		else{
  			$frmHostP->AddSpanRow("Profile for this host is missing","form_row_c");
  		}
@@ -11199,7 +11297,7 @@ index 366e6c1..4bb57c6 100644
  // BEGIN: HOSTS PROFILE EXTENDED Section
  	function insert_host_profile_ext_form(){
  
-@@ -5446,24 +5435,24 @@
+@@ -5446,24 +5449,24 @@
  			$frmHostPA->AddRow(S_DEVICE_URL_1,new CTextBox('ext_host_profiles[device_url_1]',$row['device_url_1'],61,'yes'));
  			$frmHostPA->AddRow(S_DEVICE_URL_2,new CTextBox('ext_host_profiles[device_url_2]',$row['device_url_2'],61,'yes'));
  			$frmHostPA->AddRow(S_DEVICE_URL_3,new CTextBox('ext_host_profiles[device_url_3]',$row['device_url_3'],61,'yes'));
@@ -11228,7 +11326,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHostPA->AddRow(S_SITE_STREET_1,new CTextBox('ext_host_profiles[site_street_1]',$row['site_street_1'],61,'yes'));
  			$frmHostPA->AddRow(S_SITE_STREET_2,new CTextBox('ext_host_profiles[site_street_2]',$row['site_street_2'],61,'yes'));
  			$frmHostPA->AddRow(S_SITE_STREET_3,new CTextBox('ext_host_profiles[site_street_3]',$row['site_street_3'],61,'yes'));
-@@ -5473,7 +5462,7 @@
+@@ -5473,7 +5476,7 @@
  			$frmHostPA->AddRow(S_SITE_ZIP,new CTextBox('ext_host_profiles[site_zip]',$row['site_zip'],61,'yes'));
  			$frmHostPA->AddRow(S_SITE_RACK,new CTextBox('ext_host_profiles[site_rack]',$row['site_rack'],61,'yes'));
  			$frmHostPA->AddRow(S_SITE_NOTES,new CTextArea('ext_host_profiles[site_notes]',$row['site_notes'],50,5,'yes'));
@@ -11237,7 +11335,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHostPA->AddRow(S_POC_1_NAME,new CTextBox('ext_host_profiles[poc_1_name]',$row['poc_1_name'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_1_EMAIL,new CTextBox('ext_host_profiles[poc_1_email]',$row['poc_1_email'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_1_PHONE_1,new CTextBox('ext_host_profiles[poc_1_phone_1]',$row['poc_1_phone_1'],61,'yes'));
-@@ -5481,7 +5470,7 @@
+@@ -5481,7 +5484,7 @@
  			$frmHostPA->AddRow(S_POC_1_CELL,new CTextBox('ext_host_profiles[poc_1_cell]',$row['poc_1_cell'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_1_SCREEN,new CTextBox('ext_host_profiles[poc_1_screen]',$row['poc_1_screen'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_1_NOTES,new CTextArea('ext_host_profiles[poc_1_notes]',$row['poc_1_notes'],50,5,'yes'));
@@ -11246,7 +11344,7 @@ index 366e6c1..4bb57c6 100644
  			$frmHostPA->AddRow(S_POC_2_NAME,new CTextBox('ext_host_profiles[poc_2_name]',$row['poc_2_name'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_2_EMAIL,new CTextBox('ext_host_profiles[poc_2_email]',$row['poc_2_email'],61,'yes'));
  			$frmHostPA->AddRow(S_POC_2_PHONE_1,new CTextBox('ext_host_profiles[poc_2_phone_1]',$row['poc_2_phone_1'],61,'yes'));
-@@ -5498,81 +5487,76 @@
+@@ -5498,81 +5501,76 @@
  	}
  // END:   HOSTS PROFILE EXTENDED Section
  
@@ -11354,7 +11452,7 @@ index 366e6c1..4bb57c6 100644
  		}
  		else{
  			$appname = get_request("appname","");
-@@ -5598,7 +5582,7 @@
+@@ -5598,7 +5596,7 @@
  
  		$frmApp->AddVar("apphostid",$apphostid);
  
@@ -11363,7 +11461,7 @@ index 366e6c1..4bb57c6 100644
  // anly new application can SELECT host
  			$frmApp->AddRow(S_HOST,array(
  				new CTextBox("apphost",$apphost,32,'yes'),
-@@ -5613,12 +5597,12 @@
+@@ -5613,12 +5611,12 @@
  		if(isset($_REQUEST["applicationid"])){
  			$frmApp->AddItemToBottomRow(SPACE);
  			$frmApp->AddItemToBottomRow(new CButtonDelete("Delete this application?",
@@ -11379,7 +11477,7 @@ index 366e6c1..4bb57c6 100644
  
  		$frmApp->Show();
  
-@@ -5630,9 +5614,9 @@
+@@ -5630,9 +5628,9 @@
  		if(isset($_REQUEST["sysmapid"])){
  			$result=DBselect("SELECT * FROM sysmaps WHERE sysmapid=".$_REQUEST["sysmapid"]);
  			$row=DBfetch($result);
@@ -11391,7 +11489,7 @@ index 366e6c1..4bb57c6 100644
  		if(isset($_REQUEST["sysmapid"]) && !isset($_REQUEST["form_refresh"])){
  			$name		= $row["name"];
  			$width		= $row["width"];
-@@ -5663,7 +5647,7 @@
+@@ -5663,7 +5661,7 @@
  
  		$cmbImg = new CComboBox("backgroundid",$backgroundid);
  		$cmbImg->AddItem(0,"No image...");
@@ -11400,7 +11498,7 @@ index 366e6c1..4bb57c6 100644
  		$result=DBselect('SELECT * FROM images WHERE imagetype=2 AND '.DBin_node('imageid').' order by name');
  		while($row=DBfetch($result)){
  			$cmbImg->AddItem(
-@@ -5671,7 +5655,7 @@
+@@ -5671,7 +5669,7 @@
  					get_node_name_by_elid($row["imageid"]).$row["name"]
  					);
  		}
@@ -11409,7 +11507,7 @@ index 366e6c1..4bb57c6 100644
  		$frmMap->AddRow(S_BACKGROUND_IMAGE,$cmbImg);
  
  		$cmbLabel = new CComboBox("label_type",$label_type);
-@@ -5691,18 +5675,18 @@
+@@ -5691,18 +5689,18 @@
  		$frmMap->AddRow(S_ICON_LABEL_LOCATION,$cmbLocation);
  
  		$frmMap->AddItemToBottomRow(new CButton("save",S_SAVE));
@@ -11431,7 +11529,7 @@ index 366e6c1..4bb57c6 100644
  	}
  
  	function insert_map_element_form(){
-@@ -5720,7 +5704,7 @@
+@@ -5720,7 +5718,7 @@
  		}
  
  		if(isset($_REQUEST['selementid']) && !isset($_REQUEST['form_refresh'])){
@@ -11440,7 +11538,7 @@ index 366e6c1..4bb57c6 100644
  			$elementid	= $element['elementid'];
  			$elementtype	= $element['elementtype'];
  			$label		= $element['label'];
-@@ -5735,7 +5719,7 @@
+@@ -5735,7 +5733,7 @@
  			if(is_null($label_location)) $label_location = -1;
  		}
  		else{
@@ -11449,7 +11547,7 @@ index 366e6c1..4bb57c6 100644
  			$elementid 	= get_request('elementid', 	0);
  			$elementtype	= get_request('elementtype', 	SYSMAP_ELEMENT_TYPE_HOST);
  			$label		= get_request('label',		'');
-@@ -5751,7 +5735,7 @@
+@@ -5751,7 +5749,7 @@
  
  		$cmbType = new CComboBox('elementtype',$elementtype,'submit()');
  		$available_hosts = 		get_accessible_hosts_by_user($USER_DETAILS,PERM_READ_ONLY,null,get_current_nodeid(true));
@@ -11458,7 +11556,7 @@ index 366e6c1..4bb57c6 100644
  		$sql = 'SELECT DISTINCT n.name as node_name,h.hostid,h.host '.
  				' FROM hosts h'.
  					' LEFT JOIN nodes n on n.nodeid='.DBid2nodeid('h.hostid').
-@@ -5822,7 +5806,7 @@
+@@ -5822,7 +5820,7 @@
  			$frmEl->AddRow(S_MAP, $cmbMaps);
  		}
  		else if($elementtype==SYSMAP_ELEMENT_TYPE_TRIGGER){
@@ -11467,7 +11565,7 @@ index 366e6c1..4bb57c6 100644
  
  			$trigger = '';
  			$trigger_info = DBfetch(DBselect('SELECT DISTINCT n.name as node_name,h.hostid,h.host,t.*'.
-@@ -5834,7 +5818,7 @@
+@@ -5834,7 +5832,7 @@
  				' WHERE t.triggerid='.$elementid.
  					' AND '.DBcondition('t.triggerid',$available_triggers).
  				' ORDER BY node_name,h.host,t.description'));
@@ -11476,7 +11574,7 @@ index 366e6c1..4bb57c6 100644
  			if($trigger_info)
  				$trigger = expand_trigger_description_by_data($trigger_info);
  			else
-@@ -5855,7 +5839,7 @@
+@@ -5855,7 +5853,7 @@
  		}
  		else if($elementtype==SYSMAP_ELEMENT_TYPE_HOST_GROUP){
  			$available_groups = 	get_accessible_groups_by_user($USER_DETAILS,PERM_READ_ONLY,null,get_current_nodeid(true));
@@ -11485,7 +11583,7 @@ index 366e6c1..4bb57c6 100644
  			$group = '';
  			$group_info = DBfetch(DBselect('SELECT DISTINCT n.name as node_name,g.groupid,g.name '.
  								' FROM groups g '.
-@@ -5892,7 +5876,7 @@
+@@ -5892,7 +5890,7 @@
  			$cmbIconUnknown	= new CComboBox('iconid_unknown',$iconid_unknown);
  		if ($elementtype != SYSMAP_ELEMENT_TYPE_HOST_GROUP && $elementtype != SYSMAP_ELEMENT_TYPE_MAP)
  			$cmbIconDisabled= new CComboBox('iconid_disabled',$iconid_disabled);
@@ -11494,7 +11592,7 @@ index 366e6c1..4bb57c6 100644
  		$result = DBselect('SELECT * FROM images WHERE imagetype=1 AND '.DBin_node('imageid').' order by name');
  		while($row=DBfetch($result)){
  			$row['name'] = get_node_name_by_elid($row['imageid']).$row['name'];
-@@ -5904,7 +5888,7 @@
+@@ -5904,7 +5902,7 @@
  			if ($elementtype != SYSMAP_ELEMENT_TYPE_HOST_GROUP && $elementtype != SYSMAP_ELEMENT_TYPE_MAP)
  				$cmbIconDisabled->AddItem($row['imageid'],$row['name']);
  		}
@@ -11503,7 +11601,7 @@ index 366e6c1..4bb57c6 100644
  		$frmEl->AddRow(S_ICON_OK,$cmbIconOff);
  		if ($elementtype != SYSMAP_ELEMENT_TYPE_IMAGE)
  			$frmEl->AddRow(S_ICON_PROBLEM,$cmbIconOn);
-@@ -5944,10 +5928,10 @@
+@@ -5944,10 +5942,10 @@
  
  		if(isset($_REQUEST['linkid']) && !isset($_REQUEST['form_refresh'])){
  			$frmCnct->AddVar('linkid',$_REQUEST['linkid']);
@@ -11516,7 +11614,7 @@ index 366e6c1..4bb57c6 100644
  
  			$selementid1	= $db_link['selementid1'];
  			$selementid2	= $db_link['selementid2'];
-@@ -5972,12 +5956,12 @@
+@@ -5972,12 +5970,12 @@
  /* START comboboxes preparations */
  		$cmbElements1 = new CComboBox('selementid1',$selementid1);
  		$cmbElements2 = new CComboBox('selementid2',$selementid2);
@@ -11531,7 +11629,7 @@ index 366e6c1..4bb57c6 100644
  			$label = $db_selement['label'];
  			if($db_selement['elementtype'] == SYSMAP_ELEMENT_TYPE_HOST){
  				$db_host = get_host_by_hostid($db_selement['elementid']);
-@@ -5998,7 +5982,7 @@
+@@ -5998,7 +5996,7 @@
  					$label .= ':'.$db_group['name'];
  				}
  			}
@@ -11540,7 +11638,7 @@ index 366e6c1..4bb57c6 100644
  			$cmbElements1->AddItem($db_selement['selementid'],$label);
  			$cmbElements2->AddItem($db_selement['selementid'],$label);
  		}
-@@ -6008,7 +5992,7 @@
+@@ -6008,7 +6006,7 @@
  		foreach(map_link_drawtypes() as $i){
  			$value = map_link_drawtype2str($i);
  			$cmbType->AddItem($i, $value);
@@ -11549,7 +11647,7 @@ index 366e6c1..4bb57c6 100644
  
  /* END preparation */
  
-@@ -6020,9 +6004,9 @@
+@@ -6020,9 +6018,9 @@
  			if(isset($trigger['triggerid']))
  				$triggers[$id]['description'] = expand_trigger_description($trigger['triggerid']);
  		}
@@ -11561,7 +11659,7 @@ index 366e6c1..4bb57c6 100644
  		$table->SetClass('tableinfo');
  		$table->oddRowClass = 'even_row';
  		$table->evenRowClass = 'even_row';
-@@ -6030,21 +6014,21 @@
+@@ -6030,21 +6028,21 @@
  		$table->options['cellspacing'] = 1;
  		$table->headerClass = 'header';
  		$table->footerClass = 'footer';
@@ -11588,7 +11686,7 @@ index 366e6c1..4bb57c6 100644
  			$table->AddRow(array(
  					array(
  						new CCheckBox('triggers['.$trigger['triggerid'].'][triggerid]',null,null,$trigger['triggerid']),
-@@ -6064,7 +6048,7 @@
+@@ -6064,7 +6062,7 @@
  						)
  					));
  		}
@@ -11597,7 +11695,7 @@ index 366e6c1..4bb57c6 100644
  		$btnAdd = new CButton('btn1',S_ADD,
  			"javascript: openWinCentered('popup_link_tr.php?form=1&dstfrm=".$frmCnct->GetName().url_param('linkid')."','ZBX_Link_Indicator',560,180,'scrollbars=1, toolbar=0, menubar=0, resizable=0');",
  			'T');
-@@ -6074,7 +6058,7 @@
+@@ -6074,7 +6072,7 @@
  			'T');
  
  		$btnAdd->SetType('button');
@@ -11606,7 +11704,7 @@ index 366e6c1..4bb57c6 100644
  		$frmCnct->AddRow(S_LINK_STATUS_INDICATORS,array($table, BR(), $btnAdd, $btnRemove));
  
  //----------
-@@ -6090,7 +6074,7 @@
+@@ -6090,7 +6088,7 @@
  		}
  		$frmCnct->AddItemToBottomRow(SPACE);
  		$frmCnct->AddItemToBottomRow(new CButtonCancel(url_param("sysmapid")));
@@ -11615,7 +11713,7 @@ index 366e6c1..4bb57c6 100644
  		$frmCnct->Show();
  	}
  
-@@ -6105,7 +6089,7 @@
+@@ -6105,7 +6103,7 @@
  			error($message);
  			$message = "";
  		}
@@ -12762,7 +12860,7 @@ index ad07970..e9727f8 100644
  		'ru_ru'=>  S_RUSSIAN_RU,
  		'sp_sp'=>  S_SPANISH_SP,
 diff --git a/frontends/php/include/locales/en_gb.inc.php b/frontends/php/include/locales/en_gb.inc.php
-index 81192a1..99528ea 100644
+index 81192a1..f2706a6 100644
 --- a/frontends/php/include/locales/en_gb.inc.php
 +++ b/frontends/php/include/locales/en_gb.inc.php
 @@ -1,5 +1,5 @@
@@ -12944,6 +13042,17 @@ index 81192a1..99528ea 100644
  
  //	users.php
  	'S_ZABBIX_USER'=>			'ZABBIX User',
+@@ -1574,8 +1579,8 @@
+ 	'S_CHANGE_PASSWORD'=>			'Change password',
+ 	'S_PASSWORD_ONCE_AGAIN'=>		'Password (once again)',
+ 	'S_URL_AFTER_LOGIN'=>			'URL (after login)',
+-	'S_AUTO_LOGIN'=>				'Auto-login (1 month)',
+-	'S_AUTO_LOGOUT'=>		'Auto-logout (0-disable)',
++	'S_AUTO_LOGIN'=>				'Auto-login',
++	'S_AUTO_LOGOUT'=>		'Auto-logout (min 90 seconds)',
+ 	'S_SCREEN_REFRESH'=>                    'Refresh (in seconds)',
+ 	'S_CREATE_USER'=>			'Create User',
+ 	'S_CREATE_GROUP'=>			'Create Group',
 @@ -1646,6 +1651,7 @@
  	'S_CHINESE_CN'=>			'Chinese (CN)',
  	'S_DUTCH_NL'=>				'Dutch (NL)',
@@ -14499,7 +14608,7 @@ index 2d0c3ff..cfae804 100644
  						}
  						break;
 diff --git a/frontends/php/include/page_header.php b/frontends/php/include/page_header.php
-index 27912ed..c176425 100644
+index 27912ed..ec94edf 100644
 --- a/frontends/php/include/page_header.php
 +++ b/frontends/php/include/page_header.php
 @@ -44,7 +44,7 @@ COpt::profiling_start("page");
@@ -14917,7 +15026,7 @@ index 27912ed..c176425 100644
 +			if(isset($page['menu']) && ($page['menu'] == $label)){
 +				$menu_selected = true;
 +				$sub_menu_div->addOption('style','display: block;');
-+				zbx_add_post_js('MMenu.def_label = '.zbx_jsvalue($label));
++				insert_js('MMenu.def_label = '.zbx_jsvalue($label));
 +			}
 +			else{
 +				$sub_menu_div->addOption('style','display: none;');
@@ -17080,10 +17189,28 @@ index a2dcc23..0000000
 -}
 \ No newline at end of file
 diff --git a/frontends/php/js/common.js b/frontends/php/js/common.js
-index efed52e..5aacb90 100644
+index efed52e..183c157 100644
 --- a/frontends/php/js/common.js
 +++ b/frontends/php/js/common.js
-@@ -60,7 +60,7 @@ function is_string(obj){
+@@ -21,14 +21,17 @@
+ var agt = navigator.userAgent.toLowerCase();
+ var OP = (agt.indexOf("opera") != -1) && window.opera;
+ var IE = (agt.indexOf("msie") != -1) && document.all && !OP;
++var CR = (agt.indexOf('chrome') != -1);
+ var SF = (agt.indexOf("safari") != -1);
+ var KQ = (agt.indexOf("khtml") != -1) && (!SF);
+ var GK = (agt.indexOf("gecko") != -1) && !KQ && !SF;
+ var MC = (agt.indexOf('mac') != -1)
+ 
++
+ function checkBrowser(){
+ 	if(OP) SDI('Opera');
+ 	if(IE) SDI('IE');
++	if(CR) SDI('Chrome');
+ 	if(SF) SDI('Safari');
+ 	if(KQ) SDI('Konqueror');
+ 	if(MC) SDI('Mac');
+@@ -60,7 +63,7 @@ function is_string(obj){
  
  function is_array(obj) {
  	return obj != null && typeof obj == "object" &&
@@ -17092,7 +17219,7 @@ index efed52e..5aacb90 100644
  }
  
  function SDI(msg){
-@@ -70,11 +70,11 @@ function SDI(msg){
+@@ -70,11 +73,11 @@ function SDI(msg){
  		var div_help = document.createElement('div');
  		var doc_body = document.getElementsByTagName('body')[0];
  		doc_body.appendChild(div_help);
@@ -17107,7 +17234,7 @@ index efed52e..5aacb90 100644
  	div_help.appendChild(document.createTextNode("DEBUG INFO: "));
  	div_help.appendChild(document.createElement("br"));
  	div_help.appendChild(document.createTextNode(msg));
-@@ -82,27 +82,37 @@ function SDI(msg){
+@@ -82,27 +85,38 @@ function SDI(msg){
  	div_help.appendChild(document.createElement("br"));
  }
  
@@ -17126,13 +17253,15 @@ index efed52e..5aacb90 100644
  function addListener(element, eventname, expression, bubbling){
  	bubbling = bubbling || false;
 -	
+-	if(window.addEventListener)	{
 +
- 	if(window.addEventListener)	{
++	if(window.addEventListener){
  		element.addEventListener(eventname, expression, bubbling);
  		return true;
 -	} 
+-	else if(window.attachEvent) {
 +	}
- 	else if(window.attachEvent) {
++	else if(window.attachEvent){
  		element.attachEvent('on'+eventname, expression);
  		return true;
 -	} 
@@ -17140,6 +17269,7 @@ index efed52e..5aacb90 100644
  	else return false;
  }
  
++
  function add_variable(o_el, s_name, x_value, s_formname, o_document){
  	var form;
 -	
@@ -17150,7 +17280,7 @@ index efed52e..5aacb90 100644
  	if(s_formname){
  		if( !(form = o_document.forms[s_formname]) )
  			 throw "Missed form with name '"+s_formname+"'.";
-@@ -115,23 +125,23 @@ function add_variable(o_el, s_name, x_value, s_formname, o_document){
+@@ -115,23 +129,23 @@ function add_variable(o_el, s_name, x_value, s_formname, o_document){
  		if( !(form = this.form) )
  			throw "Missed form in 'this' object";
  	}
@@ -17179,7 +17309,7 @@ index efed52e..5aacb90 100644
  //SDI(e);
  	if(e){
  		if(IE){
-@@ -160,7 +170,7 @@ function CheckAll(form_name, chkMain, shkName){
+@@ -160,7 +174,7 @@ function CheckAll(form_name, chkMain, shkName){
  }
  
  function close_window(){
@@ -17188,7 +17318,7 @@ index efed52e..5aacb90 100644
  	window.setTimeout("window.close()", 500); /* Solve bug for Internet Explorer */
  	return false;
  }
-@@ -173,7 +183,7 @@ function Confirm(msg){
+@@ -173,7 +187,7 @@ function Confirm(msg){
  }
  
  function create_var(form_name, var_name, var_val, subm){
@@ -17197,7 +17327,7 @@ index efed52e..5aacb90 100644
  	var frmForm = (is_string(form_name))?document.forms[form_name]:form_name;
  	if(!frmForm) return false;
  
-@@ -183,17 +193,16 @@ function create_var(form_name, var_name, var_val, subm){
+@@ -183,17 +197,16 @@ function create_var(form_name, var_name, var_val, subm){
  	if(is_null(objVar)){
  		objVar = document.createElement('input');
  		objVar.setAttribute('type', 	'hidden');
@@ -17218,7 +17348,7 @@ index efed52e..5aacb90 100644
  	if(subm)
  		frmForm.submit();
  
-@@ -205,7 +214,7 @@ function deselectAll(){
+@@ -205,7 +218,7 @@ function deselectAll(){
  	if(IE){
  		document.selection.empty();
  	}
@@ -17227,7 +17357,7 @@ index efed52e..5aacb90 100644
  		var sel = window.getSelection();
  		sel.removeAllRanges();
  	}
-@@ -214,31 +223,31 @@ function deselectAll(){
+@@ -214,31 +227,31 @@ function deselectAll(){
  function empty_form(id){
  	id = $(id);
  	var count = 0;
@@ -17265,7 +17395,7 @@ index efed52e..5aacb90 100644
  return targ;
  }
  
-@@ -292,13 +301,13 @@ function get_cursor_position(e){
+@@ -292,13 +305,13 @@ function get_cursor_position(e){
  	if(e.pageX || e.pageY){
  		cursor.x = e.pageX;
  		cursor.y = e.pageY;
@@ -17282,7 +17412,7 @@ index efed52e..5aacb90 100644
  		(de.scrollTop || b.scrollTop) - (de.clientTop || 0);
  	}
  	return cursor;
-@@ -326,6 +335,9 @@ function get_scroll_pos(){
+@@ -326,6 +339,9 @@ function get_scroll_pos(){
  
  
  function openWinCentered(loc, winname, iwidth, iheight, params){
@@ -17292,7 +17422,7 @@ index efed52e..5aacb90 100644
  		tp=Math.ceil((screen.height-iheight)/2);
  		lf=Math.ceil((screen.width-iwidth)/2);
  		if (params.length > 0){
-@@ -341,19 +353,21 @@ function PopUp(url,width,height,form_name){
+@@ -341,19 +357,21 @@ function PopUp(url,width,height,form_name){
  	if(!height) height = 450;
  	if(!form_name) form_name = 'zbx_popup';
  
@@ -17319,7 +17449,7 @@ index efed52e..5aacb90 100644
  	return false;
  }
  
-@@ -364,7 +378,7 @@ function remove_childs(form_name,rmvbyname,tag){
+@@ -364,7 +382,7 @@ function remove_childs(form_name,rmvbyname,tag){
  		if(frmForm.elements[i].type != 'checkbox') continue;
  		if(frmForm.elements[i].disabled == true) continue;
  		if(frmForm.elements[i].checked != true) continue;
@@ -17328,7 +17458,7 @@ index efed52e..5aacb90 100644
  		var splt = frmForm.elements[i].name.split('[');
  		var name = splt[0];
  		var serviceid = splt[1];
-@@ -382,10 +396,10 @@ function remove_element(elmnt,tag){
+@@ -382,10 +400,10 @@ function remove_element(elmnt,tag){
  	if(!is_null(elmnt)){
  		if(('undefined' != typeof(elmnt.nodeName)) && (elmnt.nodeName.toLowerCase() == tag.toLowerCase())){
  			elmnt.parentNode.removeChild(elmnt);
@@ -17341,7 +17471,7 @@ index efed52e..5aacb90 100644
  		else {
  			remove_element(elmnt.parentNode,tag);
  		}
-@@ -400,13 +414,13 @@ function resizeiframe(id){
+@@ -400,13 +418,13 @@ function resizeiframe(id){
  	if(typeof(indoc) == 'undefined') return;
  	var height = parseInt(indoc.getElementsByTagName('body')[0].scrollHeight);
  	var height2 = parseInt(indoc.getElementsByTagName('body')[0].offsetHeight);
@@ -17357,7 +17487,7 @@ index efed52e..5aacb90 100644
  	if(!is_null($('scroll')) && showgraphmenu){
  		showgraphmenu('iframe');
  	}
-@@ -418,7 +432,7 @@ function ShowHide(obj,style){
+@@ -418,7 +436,7 @@ function ShowHide(obj,style){
  	if(is_string(obj))
  		obj = document.getElementById(obj);
  	if(!obj){
@@ -17366,7 +17496,7 @@ index efed52e..5aacb90 100644
  		return false;
  	}
  
-@@ -430,7 +444,6 @@ function ShowHide(obj,style){
+@@ -430,7 +448,6 @@ function ShowHide(obj,style){
  		obj.style.display = style;
  		return 1;
  	}
@@ -17374,7 +17504,7 @@ index efed52e..5aacb90 100644
  }
  
  function switchElementsClass(obj,class1,class2){
-@@ -462,8 +475,170 @@ function ScaleChartToParenElement(obj_name){
+@@ -462,8 +479,170 @@ function ScaleChartToParenElement(obj_name){
  	}
  }
  
@@ -17392,6 +17522,8 @@ index efed52e..5aacb90 100644
  	if((typeof(ZBX_G_WIDTH) != 'undefined')) url += "&amp;width="+ZBX_G_WIDTH;
  
  	document.write('<img id="'+graph_id+'" src="'+url+'" alt="graph" /><br />');
+-}
+\ No newline at end of file
 +}
 +
 +/************************************************************************************/
@@ -17544,8 +17676,7 @@ index efed52e..5aacb90 100644
 +		}
 +		setTimeout('blink.hide()',1000);
 +	}
- }
-\ No newline at end of file
++}
 diff --git a/frontends/php/js/cookies.js b/frontends/php/js/cookies.js
 deleted file mode 100644
 index 6b6a32d..0000000
@@ -17631,9 +17762,22 @@ index 6b6a32d..0000000
 -
 -cookie.init();
 \ No newline at end of file
+diff --git a/frontends/php/js/gmenu.js b/frontends/php/js/gmenu.js
+index c8de989..542eb70 100644
+--- a/frontends/php/js/gmenu.js
++++ b/frontends/php/js/gmenu.js
+@@ -810,7 +810,7 @@ function gmenucreate(top,left){
+ 	
+ 	Element.extend(div_gmenu);
+ 	div_gmenu.setAttribute('id','gmenu');
+-	div_gmenu.setStyle({top: top+'px', left: left+'px',display: 'none'});
++	div_gmenu.setStyle({'top': top+'px', 'left': left+'px','display': 'none'});
+ 	
+ ////////////////////////////////////////////// BSDATE
+ 
 diff --git a/frontends/php/js/gpc.js b/frontends/php/js/gpc.js
 new file mode 100644
-index 0000000..9cdf693
+index 0000000..e138457
 --- /dev/null
 +++ b/frontends/php/js/gpc.js
 @@ -0,0 +1,302 @@
@@ -17811,7 +17955,7 @@ index 0000000..9cdf693
 +	
 +	var query = '';
 +	for(var key in this.arguments){
-+		if(typeof(this.arguments[key]) != 'undefined'){
++		if((typeof(this.arguments[key]) != 'undefined') && !is_null(this.arguments[key])){
 +			query+=key+'='+this.arguments[key]+'&';
 +		}
 +	}
@@ -18017,6 +18161,28 @@ index 9a17d01..30c2712 100644
  			grp_status_rmv_frm.push(menu_row);
  		}
  	}
+diff --git a/frontends/php/js/sbinit.js b/frontends/php/js/sbinit.js
+index 362be5c..5db8ea0 100644
+--- a/frontends/php/js/sbinit.js
++++ b/frontends/php/js/sbinit.js
+@@ -205,6 +205,7 @@ function graphload(dom_objects,unix_stime,period,dynamic){
+ 			G_MENU.setPeriodType();
+ //---------
+ //alert(url_stime);
++
+ 			uri = new url(dom_objects[i].src);
+ 			uri.setArgument('stime', url_stime);
+ 			uri.setArgument('period', period);
+@@ -216,7 +217,8 @@ function graphload(dom_objects,unix_stime,period,dynamic){
+ 		uri = new url(dom_objects[0].href);
+ 		uri.setArgument('stime', url_stime);
+ 		uri.setArgument('period', period);
+-
++		uri.setArgument('output', null);
++//	alert(uri.getUrl());
+ 		dom_objects[0].href = uri.getUrl();
+ 	}	
+ }
 diff --git a/frontends/php/js/updater.js b/frontends/php/js/updater.js
 index 4293e73..b8c5777 100644
 --- a/frontends/php/js/updater.js
@@ -18427,7 +18593,7 @@ index d8536e1..08a182e 100644
  	while($db_item = DBfetch($db_items)){
  		
 diff --git a/frontends/php/locales.php b/frontends/php/locales.php
-index 70b1b45..f680315 100644
+index 70b1b45..0cc23ac 100644
 --- a/frontends/php/locales.php
 +++ b/frontends/php/locales.php
 @@ -19,11 +19,11 @@
@@ -18469,7 +18635,7 @@ index 70b1b45..f680315 100644
 -	if($_REQUEST['extlang'] != 'new'){
 -		$fileTo = 'include/locales/'.$_REQUEST['extlang'].".inc.php";
 +	$frmLcls->addVar('extlang',$_REQUEST['extlang']);
-+	if(ereg('^[A-Za-z0-9_]+$', $_REQUEST['srclang']) && ($_REQUEST['extlang'] != 'new')){
++	if(ereg('^[A-Za-z0-9_]+$', $_REQUEST['extlang']) && ($_REQUEST['extlang'] != 'new')){
 +		$fileTo = 'include/locales/'.$_REQUEST['extlang'].'.inc.php';
  		if(file_exists($fileTo)){
  			include($fileTo);
@@ -19501,6 +19667,19 @@ index 2beb337..dea2a58 100644
  		$table->addRow(array($name, $row['name'], $row['surname'], user_type2str($row['type'])));
  	}
  	$table->show();
+diff --git a/frontends/php/profile.php b/frontends/php/profile.php
+index a873d8b..0e15198 100644
+--- a/frontends/php/profile.php
++++ b/frontends/php/profile.php
+@@ -44,7 +44,7 @@ include_once "include/page_header.php";
+ 		"lang"=>	array(T_ZBX_STR, O_OPT,	null,	NOT_EMPTY,	'isset({save})'),
+ 		"theme"=>		array(T_ZBX_STR, O_OPT,	null,	NOT_EMPTY,	'isset({save})'),
+ 		'autologin'=>	array(T_ZBX_INT, O_OPT,	null,	IN('0,1'),	null),
+-		"autologout"=>  array(T_ZBX_INT, O_OPT, null,   BETWEEN(0,3600),'isset({save})'),
++		"autologout"=>  array(T_ZBX_INT, O_OPT, null,   BETWEEN(90,10000), null),
+ 		"url"=>		array(T_ZBX_STR, O_OPT,	null,	null,		'isset({save})'),
+ 		"refresh"=>	array(T_ZBX_INT, O_OPT,	null,	BETWEEN(0,3600),'isset({save})'),
+ 		"change_password"=>	array(T_ZBX_STR, O_OPT,	null,	null,	null),
 diff --git a/frontends/php/report2.php b/frontends/php/report2.php
 index 6498b2d..7a4ac01 100644
 --- a/frontends/php/report2.php
@@ -21018,10 +21197,123 @@ index 0000000..b95be6b
 +}
 \ No newline at end of file
 diff --git a/frontends/php/styles/css_bb.css b/frontends/php/styles/css_bb.css
-index 3e91d3f..0541865 100644
+index 3e91d3f..a61cd6f 100644
 --- a/frontends/php/styles/css_bb.css
 +++ b/frontends/php/styles/css_bb.css
-@@ -319,7 +319,11 @@ div#scrolltabright{
+@@ -10,6 +10,7 @@
+ @media screen {
+ 	body{
+ 		background-color:#353535;
++		color: #0088FF;
+ 	} 
+ }
+ 
+@@ -113,6 +114,10 @@ A.styled:active 	{	color:#0BF;	 }
+ 
+ 
+ /*////////////////	TABLES	////////////////////*/
++table{
++	color: #000000;
++}
++
+ table.page_header tr td.page_header_r{
+ /*
+ 	background-position:right;
+@@ -159,15 +164,16 @@ td.form_row_r_simple { /* right cell simple */
+ 	border-color: #222; 
+ }
+ 
+-table.formlongtable tr td.form_row_first
+-{
++table.formlongtable tr td.form_row_first{
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+ 	border-color: #222; 
+ }
++
+ table.formlongtable tr td.form_row_last {
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+ 	border-color: #222; 
+ }
++
+ table.formlongtable tr td.form_row_l { /* left cell */
+ 	border-color:	#222;
+ }
+@@ -183,7 +189,9 @@ table.tabletree tr.footer td {
+ }
+ 
+ table.tableinfo{
++	border-spacing: 1px; 
+ 	background-color: #5A5A5A;
++	border: 0px #5A5A5A solid; 
+ }
+ 
+ table.tableinfo tr td.normal			{	background-color: #AADDDD;	border: 1px #AADDDD solid; }
+@@ -201,6 +209,12 @@ table.tableinfo tr.footer td {
+ table.header{
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+ }
++table.header tr td.header_l{
++	height: 24px;
++}
++table.header tr td.header_r{
++	height: 24px;
++}
+ 
+ table.filter{
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+@@ -238,11 +252,18 @@ table.hosts_info tr td.header {
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+ }
+ 
++table.server_info{
++	border: 1px #555555 solid;
++}
+ 
+ table.server_info tr td.header {
+ 	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
+ }
+ 
++table.server_info tr.footer td {
++	background: #5C7099 url('../images/gradients/table_head2_bb.gif') repeat-x top left;
++}
++
+ table.history td.caption{
+ 	color:#0AF;
+ }
+@@ -252,13 +273,30 @@ table.msgok{
+ 	border: 1px #0088FF solid;
+ }
+ 
+-table.msgok td.clr{
++table.msgok tr td.clr{
+ 	background-color:#0088FF;
+ }
+ 
+-table.msgok td.msg{
++table.msgok tr td.msg{
+ 	background-color:#BBBBFF;
+ }
++
++/*  SCREENS */
++table.screen_edit{
++	background-color: #333333;
++}
++
++table.screen_edit td{
++	background-color: #333333;
++}
++
++table.screen_view{
++	background-color: #333333;
++}
++
++table.screen_view td{
++	background-color: #333333;
++}
+ /*----------*/
+ 
+ /*////////////////	DIVS	////////////////////*/
+@@ -319,7 +357,11 @@ div#scrolltabright{
  }
  
  span.green{
@@ -21549,10 +21841,50 @@ index 2802c7a..0000000
 -}
 \ No newline at end of file
 diff --git a/frontends/php/styles/table.css b/frontends/php/styles/table.css
-index bcc188f..5cc4e3c 100644
+index bcc188f..b5e15e7 100644
 --- a/frontends/php/styles/table.css
 +++ b/frontends/php/styles/table.css
-@@ -766,15 +766,18 @@ table.menu{
+@@ -370,15 +370,13 @@ table.screen_edit tr td.right_top {	text-align: right;	vertical-align: top;		}
+ table.screen_edit tr td.right_mdl {	text-align: right;	vertical-align: middle;		}
+ table.screen_edit tr td.right_bttm {	text-align: right;	vertical-align: bottom;		}
+ 
+-table.screen_view
+-{
++table.screen_view{
+ 	background-color: #FFFFFF;
+ 	width: 100%;
+ 	border: 1px #DDDDDD;
+ }
+ 
+-table.screen_view td
+-{
++table.screen_view td{
+ 	background-color: #FFFFFF;
+ 	border: 1px #DDDDDD;
+ 	text-align: center;
+@@ -476,8 +474,9 @@ table.tableinfo{
+ 	color: #000000;
+ 	width: 100%; 
+ 	background-color: #AAAAAA;
+-	border-spacing:	1px; /* cellspacing */
+-	border-width: 0px;
++	border-spacing: 1px; 
++
++/*	border: 1px #AAAAAA dotted; */
+ }
+ 
+ table.tableinfo tr td {
+@@ -620,8 +619,7 @@ table.header tr td.header_r{
+ 	padding-right: 5px;
+ }
+ 
+-table.header a
+-{
++table.header a{
+ 	color: #FFFFFF;
+ }
+ 
+@@ -766,15 +764,18 @@ table.menu{
  }
  
  table.menu tr{
@@ -21574,7 +21906,7 @@ index bcc188f..5cc4e3c 100644
  	border-width:1px;
  	border-top-style: solid;
  	border-left-style: solid;
-@@ -782,10 +785,13 @@ table.menu td{
+@@ -782,10 +783,13 @@ table.menu td{
  	border-bottom-style: solid;
  }
  
@@ -21590,7 +21922,57 @@ index bcc188f..5cc4e3c 100644
  }
  
  /************* SUB MENU ************/
-@@ -1162,11 +1168,7 @@ table.msgerr{
+@@ -904,7 +908,6 @@ table.server_info tr td {
+ 	border: 0px;
+ 	padding-left: 5px;
+ 	padding-right: 5px;
+-	font-weight: bold;
+ 	text-align: left;
+ 	font-family: Verdana, Helvetica, Geneva;
+ 	font-size: 11px;
+@@ -922,7 +925,6 @@ table.server_info tr.status td{
+ 	white-space: nowrap;
+ 	word-spacing:	0px;
+ }
+-
+ /**************** WARNING ***********/
+ 
+ table.warning{
+@@ -1135,25 +1137,26 @@ table.msgok{
+ 	border: 1px #44CC44 solid;
+ }
+ 
+-table.msgok tr{
+-	height: 26px;
+-}
+-
+-table.msgok td{
++table.msgok tr td{
+ 	color:#333;
+ 	font-family: Verdana, Helvetica, Geneva;
+ 	font-size:11px;
+ 	text-align:center;
+ }
+ 
+-table.msgok td.clr{
++table.msgok tr td.clr{
+ 	width: 60px;
+ 	background-color:#44CC44;
+ 	font-size:10px;
+ 	font-weight: bold;
+ }
+ 
+-table.msgok td.msg{
++
++table.msgok tr td.msg_main{
++	height: 26px;
++}
++
++table.msgok tr td.msg{
+ 	background-color:#BBFFBB;
+ }
+ 
+@@ -1162,25 +1165,25 @@ table.msgerr{
  	border: 1px #CC4444 solid;
  }
  
@@ -21603,11 +21985,40 @@ index bcc188f..5cc4e3c 100644
  	color:#333;
  	font-family: Verdana, Helvetica, Geneva;
  	font-size:11px;
+ 	text-align:center;
+ }
+ 
+-table.msgerr td.clr{
++table.msgerr tr td.clr{
+ 	width: 60px;
+ 	background-color:#CC4444;
+ 	font-size:10px;
+ 	font-weight: bold;
+ }
+ 
+-table.msgerr td.msg{
++table.msgerr tr td.msg_main{
++	height: 26px;
++}
++
++table.msgerr tr td.msg{
+ 	background-color:#FFBBBB;
+ }
+ /**************** </MESSAGE> *****************/
+\ No newline at end of file
 diff --git a/frontends/php/styles/ul.css b/frontends/php/styles/ul.css
-index 8b27ca9..8b83e34 100644
+index 8b27ca9..42d4502 100644
 --- a/frontends/php/styles/ul.css
 +++ b/frontends/php/styles/ul.css
-@@ -28,8 +28,7 @@ ul.messages li.info{
+@@ -21,6 +21,7 @@ ul.messages{
+ ul.messages li{
+ 	font-family: Verdana, Arial, Helvetica, sans-serif;
+ 	font-size: 8pt;
++	height: 18px;
+ }
+ 
+ ul.messages li.info{
+@@ -28,8 +29,7 @@ ul.messages li.info{
  	list-style: url("../images/general/warning_small.gif") inside;
  }
  
@@ -22416,7 +22827,7 @@ index 1cbc956..27f2a90 100644
  
  	zbx_add_post_js('blink.init();');	
 diff --git a/frontends/php/triggers.php b/frontends/php/triggers.php
-index 8c766bc..9ae440e 100644
+index 8c766bc..90c785f 100644
 --- a/frontends/php/triggers.php
 +++ b/frontends/php/triggers.php
 @@ -95,14 +95,11 @@
@@ -22435,6 +22846,15 @@ index 8c766bc..9ae440e 100644
  /* FORM ACTIONS */
  
  	if(isset($_REQUEST['clone']) && isset($_REQUEST['triggerid'])){
+@@ -115,7 +112,7 @@
+ 		$result = false;
+ 		
+ 		
+-		$visible = $_REQUEST['visible'];
++		$visible = get_request('visible', array());
+ 		$dependencies = get_request('dependencies',array());
+ 		
+ 		$triggers = $_REQUEST['g_triggerid'];
 @@ -207,7 +204,7 @@
  	else if(isset($_REQUEST['delete'])&&isset($_REQUEST['triggerid'])){
  		$result = false;
@@ -22453,7 +22873,15 @@ index 8c766bc..9ae440e 100644
  				$hosts_ids = array();
  				$group_ids = $_REQUEST['copy_targetid'];
  
-@@ -271,14 +268,14 @@
+@@ -264,21 +261,21 @@
+ 		else{
+ 			error('No target selection.');
+ 		}
+-		show_messages();
++		show_messages($result, S_TRIGGER_ADDED, S_CANNOT_ADD_TRIGGER);
+ 	}
+ /* DEPENDENCE ACTIONS */
+ 	else if(isset($_REQUEST['add_dependence'])&&isset($_REQUEST['new_dependence'])){
  		if(!isset($_REQUEST['dependencies']))
  			$_REQUEST['dependencies'] = array();
  
@@ -22491,7 +22919,7 @@ index 8c766bc..9ae440e 100644
 +			$_REQUEST['groupid'] = $group['groupid'];
 +		}
 +	}
- 	
++	
 +	if(isset($_REQUEST['triggerid']) && ($_REQUEST['triggerid']>0)){
 +		$sql_from = '';
 +		$sql_where = '';
@@ -22528,7 +22956,7 @@ index 8c766bc..9ae440e 100644
 +	$params=array();
 +	$options = array('with_items','only_current_node');
 +	foreach($options as $option) $params[$option] = 1;
-+	
+ 	
 +	$PAGE_GROUPS = get_viewed_groups(PERM_READ_WRITE, $params);
 +	$PAGE_HOSTS = get_viewed_hosts(PERM_READ_WRITE, $PAGE_GROUPS['selected'], $params);
 +
@@ -22716,7 +23144,7 @@ index 8c766bc..9ae440e 100644
  
  <?php
 diff --git a/frontends/php/users.php b/frontends/php/users.php
-index d5b8cc6..5d75057 100644
+index d5b8cc6..b334ca2 100644
 --- a/frontends/php/users.php
 +++ b/frontends/php/users.php
 @@ -1,7 +1,7 @@
@@ -22744,6 +23172,15 @@ index d5b8cc6..5d75057 100644
  ?>
  <?php
  	$_REQUEST['config']=get_request('config',get_profile('web.users.config',0));
+@@ -65,7 +65,7 @@ include_once('include/page_header.php');
+ 		'lang'=>		array(T_ZBX_STR, O_OPT,	null,	NOT_EMPTY,	'(isset({config})&&({config}==0))&&isset({save})'),
+ 		'theme'=>		array(T_ZBX_STR, O_OPT,	null,	NOT_EMPTY,	'(isset({config})&&({config}==0))&&isset({save})'),
+ 		'autologin'=>	array(T_ZBX_INT, O_OPT,	null,	IN('0,1'),	null),
+-		'autologout'=>	array(T_ZBX_INT, O_OPT,	null,	BETWEEN(0,3600),'(isset({config})&&({config}==0))&&isset({save})'),
++		'autologout'=>	array(T_ZBX_INT, O_OPT,	null,	BETWEEN(90,10000), null),
+ 		'url'=>			array(T_ZBX_STR, O_OPT,	null,	null,		'(isset({config})&&({config}==0))&&isset({save})'),
+ 		'refresh'=>		array(T_ZBX_INT, O_OPT,	null,	BETWEEN(0,3600),'(isset({config})&&({config}==0))&&isset({save})'),
+ 
 @@ -94,8 +94,7 @@ include_once('include/page_header.php');
  		'set_gui_access'=>		array(T_ZBX_INT, O_OPT,	null,	IN('0,1,2'), null),
  
@@ -22754,7 +23191,18 @@ index d5b8cc6..5d75057 100644
  
  		'save'=>	array(T_ZBX_STR, O_OPT, P_SYS|P_ACT,	null,	null),
  		'delete'=>	array(T_ZBX_STR, O_OPT, P_SYS|P_ACT,	null,	null),
-@@ -157,7 +156,7 @@ include_once('include/page_header.php');
+@@ -120,9 +119,8 @@ include_once('include/page_header.php');
+ 		'form_refresh'=>array(T_ZBX_STR, O_OPT, null,	null,	null)
+ 	);
+ 
+-
+ 	check_fields($fields);
+-	validate_sort_and_sortorder('u.alias',ZBX_SORT_UP);	
++	validate_sort_and_sortorder('u.alias',ZBX_SORT_UP);
+ ?>
+ <?php
+ 	if($_REQUEST['config']==0){
+@@ -157,7 +155,7 @@ include_once('include/page_header.php');
  			if(($config['authentication_type'] != ZBX_AUTH_INTERNAL) && zbx_empty($_REQUEST['password1'])){
  				if(($config['authentication_type'] == ZBX_AUTH_LDAP) && isset($_REQUEST['userid'])){
  					if(GROUP_GUI_ACCESS_INTERNAL != get_user_auth($_REQUEST['userid'])){
@@ -22763,7 +23211,16 @@ index d5b8cc6..5d75057 100644
  					}
  				}
  				else{
-@@ -467,6 +466,7 @@ include_once('include/page_header.php');
+@@ -183,7 +181,7 @@ include_once('include/page_header.php');
+ 					DBstart();
+ 					$result=update_user($_REQUEST['userid'],
+ 						$_REQUEST['name'],$_REQUEST['surname'],$_REQUEST['alias'],
+-						$_REQUEST['password1'],$_REQUEST['url'],get_request('autologin',0),$_REQUEST['autologout'],
++						$_REQUEST['password1'],$_REQUEST['url'],get_request('autologin',0),get_request('autologout',0),
+ 						$_REQUEST['lang'],$_REQUEST['theme'],$_REQUEST['refresh'],$_REQUEST['user_type'],
+ 						$user_groups, $user_medias);
+ 						
+@@ -467,6 +465,7 @@ include_once('include/page_header.php');
  	echo SBR; 
  ?>
  <?php
@@ -22771,7 +23228,7 @@ index d5b8cc6..5d75057 100644
  	if($_REQUEST['config']==0){
  		if(isset($_REQUEST['form'])){
  			insert_user_form(get_request('userid',null));
-@@ -474,8 +474,15 @@ include_once('include/page_header.php');
+@@ -474,8 +473,15 @@ include_once('include/page_header.php');
  		else{
  			$form = new CForm(null,'post');
  			$form->SetName('users');
@@ -22788,7 +23245,7 @@ index d5b8cc6..5d75057 100644
  			$table=new CTableInfo(S_NO_USERS_DEFINED);
  			$table->setHeader(array(
  				array(new CCheckBox('all_users',NULL,
-@@ -584,6 +591,7 @@ include_once('include/page_header.php');
+@@ -584,6 +590,7 @@ include_once('include/page_header.php');
  					$users_status,
  					$action
  					));
@@ -22796,7 +23253,7 @@ index d5b8cc6..5d75057 100644
  			}
  			$table->SetFooter(new CCol(new CButtonQMessage('delete_selected',S_DELETE_SELECTED,S_DELETE_SELECTED_USERS_Q)));
  
-@@ -601,7 +609,13 @@ include_once('include/page_header.php');
+@@ -601,7 +608,13 @@ include_once('include/page_header.php');
  			insert_usergroups_form();
  		}
  		else{
@@ -22811,7 +23268,7 @@ index d5b8cc6..5d75057 100644
  			$form = new CForm();
  
  			$table = new CTableInfo(S_NO_USER_GROUPS_DEFINED);
-@@ -672,6 +686,7 @@ include_once('include/page_header.php');
+@@ -672,6 +685,7 @@ include_once('include/page_header.php');
  					),
  					new CCol($users,'wraptext')
  					));
@@ -22819,7 +23276,7 @@ index d5b8cc6..5d75057 100644
  			}
  			$table->SetFooter(new CCol(new CButtonQMessage('delete_selected',S_DELETE_SELECTED,S_DELETE_SELECTED_GROUPS_Q)));
  
-@@ -679,6 +694,8 @@ include_once('include/page_header.php');
+@@ -679,6 +693,8 @@ include_once('include/page_header.php');
  			$form->Show();
  		}
  	}
@@ -22957,6 +23414,59 @@ index d8440b2..e147807 100644
  
  void    DBget_item_from_db(DB_ITEM *item,DB_ROW row);
  
+diff --git a/include/dbcache.h b/include/dbcache.h
+index b04adcb..cc2e22b 100644
+--- a/include/dbcache.h
++++ b/include/dbcache.h
+@@ -25,12 +25,15 @@
+ #define ZBX_DC_HISTORY struct zbx_dc_history_type
+ #define ZBX_DC_TREND struct zbx_dc_trend_type
+ #define ZBX_DC_NEXTCHECK struct zbx_dc_nextcheck_type
++#define ZBX_DC_ID struct zbx_dc_id_type
++#define ZBX_DC_IDS struct zbx_dc_ids_type
+ 
+ #define	ZBX_HISTORY_SIZE	100000
+ /* Must be less than ZBX_HISTORY_SIZE */
+ #define	ZBX_SYNC_MAX		1000
+ #define	ZBX_TREND_SIZE		100000
+ #define	ZBX_TEXTBUFFER_SIZE	16384*1024
++#define ZBX_IDS_SIZE		6
+ 
+ #define ZBX_SYNC_PARTIAL	0
+ #define	ZBX_SYNC_FULL		1
+@@ -43,6 +46,17 @@ typedef union{
+ 	char		*value_str;
+ } history_value_t;
+ 
++ZBX_DC_ID
++{
++	char		table_name[64], field_name[64];
++	zbx_uint64_t	lastid;
++};
++
++ZBX_DC_IDS
++{
++	ZBX_DC_ID	id[ZBX_IDS_SIZE];
++};
++
+ ZBX_DC_HISTORY
+ {
+ 	zbx_uint64_t	itemid;
+@@ -57,6 +71,7 @@ ZBX_DC_HISTORY
+ 	int		lastlogsize;
+ 	int		keep_history;
+ 	int		keep_trends;
++	int		functions;
+ };
+ 
+ ZBX_DC_TREND
+@@ -103,4 +118,6 @@ void	DCinit_nextchecks();
+ void	DCadd_nextcheck(DB_ITEM *item, time_t now, time_t timediff, const char *error_msg);
+ void	DCflush_nextchecks();
+ 
++zbx_uint64_t	DCget_nextid(const char *table_name, const char *field_name, int num);
++
+ #endif
 diff --git a/include/dbschema.h b/include/dbschema.h
 index 39f6cdb..3c1061d 100644
 --- a/include/dbschema.h
@@ -22969,6 +23479,21 @@ index 39f6cdb..3c1061d 100644
  };
  
  #define ZBX_MAX_FIELDS 64
+diff --git a/include/mutexs.h b/include/mutexs.h
+index 83c5075..76e3134 100644
+--- a/include/mutexs.h
++++ b/include/mutexs.h
+@@ -43,8 +43,9 @@
+ #	define ZBX_MUTEX_LOG		0
+ #	define ZBX_MUTEX_NODE_SYNC	1
+ #	define ZBX_MUTEX_CACHE		2
++#	define ZBX_MUTEX_CACHE_IDS	3
+ /* This has to be the last MUTEX in the list with MAX number */
+-#	define ZBX_MUTEX_COUNT		3
++#	define ZBX_MUTEX_COUNT		4
+ 
+ #	define ZBX_MUTEX_MAX_TRIES	20 /* seconds */
+ 
 diff --git a/include/sysinfo.h b/include/sysinfo.h
 index c5bd3d3..75be99f 100644
 --- a/include/sysinfo.h
@@ -23063,6 +23588,9 @@ index 933fd04..45a43a2 100644
                  AC_DEFINE(HAVE_UCDSNMP,1,[Define to 1 if UCD-SNMP should be enabled.])
                  AC_DEFINE(HAVE_SNMP,1,[Define to 1 if SNMP should be enabled.])
  	fi
+diff --git a/misc/clock/clock.fla b/misc/clock/clock.fla
+index 0d2ed4b..7bb107a 100755
+Binary files a/misc/clock/clock.fla and b/misc/clock/clock.fla differ
 diff --git a/misc/conf/zabbix_agentd.conf b/misc/conf/zabbix_agentd.conf
 index 8881312..3f5b188 100644
 --- a/misc/conf/zabbix_agentd.conf
@@ -23276,10 +23804,51 @@ index bc8ddf1..d03a53e 100644
 +	return __parse_cfg_file(cfg_file, cfg, 0);
 +}
 diff --git a/src/libs/zbxdbcache/dbcache.c b/src/libs/zbxdbcache/dbcache.c
-index 65f40df..9a911c2 100644
+index 65f40df..a5c2d26 100644
 --- a/src/libs/zbxdbcache/dbcache.c
 +++ b/src/libs/zbxdbcache/dbcache.c
-@@ -554,26 +554,30 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
+@@ -29,6 +29,8 @@
+ 
+ #define	LOCK_CACHE	zbx_mutex_lock(&cache_lock)
+ #define	UNLOCK_CACHE	zbx_mutex_unlock(&cache_lock)
++#define	LOCK_CACHE_IDS		zbx_mutex_lock(&cache_ids_lock)
++#define	UNLOCK_CACHE_IDS	zbx_mutex_unlock(&cache_ids_lock)
+ 
+ #define ZBX_GET_SHM_DBCACHE_KEY(smk_key) 								\
+ 	{if( -1 == (shm_key = ftok(CONFIG_FILE, (int)'c') )) 						\
+@@ -43,7 +45,10 @@
+         }}
+ 
+ ZBX_DC_CACHE		*cache = NULL;
++ZBX_DC_IDS		*ids = NULL;
++
+ static ZBX_MUTEX	cache_lock;
++static ZBX_MUTEX	cache_ids_lock;
+ 
+ static char		*sql = NULL;
+ static int		sql_allocated = 65536;
+@@ -469,7 +474,7 @@ static void	DCmass_update_triggers(ZBX_DC_HISTORY *history, int history_num)
+ 			TRIGGER_STATUS_ENABLED);
+ 
+ 	for (i = 0; i < history_num; i++)
+-		if (0 == history[i].value_null)
++		if (0 != history[i].functions)
+ 			zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 32, ZBX_FS_UI64 ",",
+ 					history[i].itemid);
+ 
+@@ -478,6 +483,11 @@ static void	DCmass_update_triggers(ZBX_DC_HISTORY *history, int history_num)
+ 		sql_offset--;
+ 		zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 32, ")");
+ 	}
++	else
++	{
++		zabbix_log(LOG_LEVEL_DEBUG, "No items with triggers");
++		return;
++	}
+ 
+ 	result = DBselect("%s", sql);
+ 
+@@ -554,26 +564,30 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
  	DB_RESULT	result;
  	DB_ROW		row;
  	DB_ITEM		item;
@@ -23320,7 +23889,7 @@ index 65f40df..9a911c2 100644
  
  	result = DBselect("%s", sql);
  
-@@ -715,17 +719,19 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
+@@ -715,17 +729,19 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
  			break;
  		case ITEM_VALUE_TYPE_STR:
  		case ITEM_VALUE_TYPE_TEXT:
@@ -23344,7 +23913,7 @@ index 65f40df..9a911c2 100644
  			break;
  		}
  
-@@ -746,6 +752,18 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
+@@ -746,6 +762,18 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
  
  		zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 128, " where itemid=" ZBX_FS_UI64 ";\n",
  				item.itemid);
@@ -23363,7 +23932,7 @@ index 65f40df..9a911c2 100644
  	}
  	DBfree_result(result);
  
-@@ -773,22 +791,57 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
+@@ -773,22 +801,57 @@ static void	DCmass_update_item(ZBX_DC_HISTORY *history, int history_num)
   ******************************************************************************/
  static void	DCmass_proxy_update_item(ZBX_DC_HISTORY *history, int history_num)
  {
@@ -23429,7 +23998,7 @@ index 65f40df..9a911c2 100644
  		}
  	}
  
-@@ -796,6 +849,8 @@ static void	DCmass_proxy_update_item(ZBX_DC_HISTORY *history, int history_num)
+@@ -796,6 +859,8 @@ static void	DCmass_proxy_update_item(ZBX_DC_HISTORY *history, int history_num)
  	zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 8, "end;\n");
  #endif
  
@@ -23438,7 +24007,7 @@ index 65f40df..9a911c2 100644
  	if (sql_offset > 16) /* In ORACLE always present begin..end; */
  		DBexecute("%s", sql);
  }
-@@ -822,7 +877,7 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
+@@ -822,7 +887,7 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
  	DB_ITEM		item;
  	ZBX_DC_HISTORY	*h;
  	char		*lastvalue;
@@ -23447,7 +24016,29 @@ index 65f40df..9a911c2 100644
  	int		sql_offset = 0, i;
  
  	zabbix_log(LOG_LEVEL_DEBUG, "In DCmass_function_update()");
-@@ -888,18 +943,20 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
+@@ -836,9 +901,12 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
+ 			TRIGGER_STATUS_ENABLED);
+ 
+ 	for (i = 0; i < history_num; i++)
++	{
++		history[i].functions = 0;
+ 		if (0 == history[i].value_null)
+ 			zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 32, ZBX_FS_UI64 ",",
+ 					history[i].itemid);
++	}
+ 
+ 	if (sql[sql_offset - 1] == ',')
+ 	{
+@@ -872,6 +940,8 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
+ 		if (NULL == h)
+ 			continue;
+ 
++		h->functions		= 1;
++
+ 		function.function	= row[ZBX_SQL_ITEM_FIELDS_NUM];
+ 		function.parameter	= row[ZBX_SQL_ITEM_FIELDS_NUM + 1];
+ 		function.itemid		= zbx_atoui64(row[ZBX_SQL_ITEM_FIELDS_NUM + 2]);
+@@ -888,18 +958,20 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
  		/* Update only if lastvalue differs from new one */
  		if (DBis_null(lastvalue) == SUCCEED || strcmp(lastvalue, value) != 0)
  		{
@@ -23471,7 +24062,7 @@ index 65f40df..9a911c2 100644
  			zbx_free(value_esc);
  		}
  	}
-@@ -930,7 +987,7 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
+@@ -930,7 +1002,7 @@ static void DCmass_function_update(ZBX_DC_HISTORY *history, int history_num)
  static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  {
  	int		sql_offset = 0, i;
@@ -23480,7 +24071,7 @@ index 65f40df..9a911c2 100644
  	int		history_text_num, history_log_num;
  	zbx_uint64_t	id;
  #ifdef HAVE_MYSQL
-@@ -1151,7 +1208,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1151,7 +1223,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  		if (0 != history[i].value_null)
  			continue;
  
@@ -23489,7 +24080,7 @@ index 65f40df..9a911c2 100644
  #ifdef HAVE_MYSQL
  		zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 512,
  				"(" ZBX_FS_UI64 ",%d,'%s'),",
-@@ -1166,6 +1223,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1166,6 +1238,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  				history[i].clock,
  				value_esc);
  #endif
@@ -23497,7 +24088,7 @@ index 65f40df..9a911c2 100644
  	}
  
  #ifdef HAVE_MYSQL
-@@ -1197,7 +1255,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1197,7 +1270,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  			if (0 != history[i].value_null)
  				continue;
  
@@ -23506,7 +24097,7 @@ index 65f40df..9a911c2 100644
  #ifdef HAVE_MYSQL
  			zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 512,
  					"(%d," ZBX_FS_UI64 ",%d,'%s'),",
-@@ -1214,6 +1272,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1214,6 +1287,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  					history[i].clock,
  					value_esc);
  #endif
@@ -23514,7 +24105,7 @@ index 65f40df..9a911c2 100644
  		}
  
  #ifdef HAVE_MYSQL
-@@ -1260,24 +1319,24 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1260,24 +1334,24 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  			if (0 != history[i].value_null)
  				continue;
  
@@ -23545,7 +24136,7 @@ index 65f40df..9a911c2 100644
  			id++;
  		}
  
-@@ -1316,31 +1375,32 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1316,31 +1390,32 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  			if (0 != history[i].value_null)
  				continue;
  
@@ -23587,7 +24178,7 @@ index 65f40df..9a911c2 100644
  			id++;
  		}
  
-@@ -1384,7 +1444,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1384,7 +1459,7 @@ static void	DCmass_add_history(ZBX_DC_HISTORY *history, int history_num)
  static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
  {
  	int		sql_offset = 0, i;
@@ -23596,7 +24187,7 @@ index 65f40df..9a911c2 100644
  #ifdef HAVE_MYSQL
  	int		tmp_offset;
  #endif
-@@ -1479,7 +1539,7 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1479,7 +1554,7 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
  	{
  		if (history[i].value_type == ITEM_VALUE_TYPE_STR)
  		{
@@ -23605,7 +24196,7 @@ index 65f40df..9a911c2 100644
  #ifdef HAVE_MYSQL
  			zbx_snprintf_alloc(&sql, &sql_allocated, &sql_offset, 512,
  					"(" ZBX_FS_UI64 ",%d,'%s'),",
-@@ -1494,6 +1554,7 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1494,6 +1569,7 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
  					history[i].clock,
  					value_esc);
  #endif
@@ -23613,7 +24204,7 @@ index 65f40df..9a911c2 100644
  		}
  	}
  
-@@ -1517,22 +1578,22 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1517,22 +1593,22 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
  	{
  		if (history[i].value_type == ITEM_VALUE_TYPE_TEXT)
  		{
@@ -23642,7 +24233,7 @@ index 65f40df..9a911c2 100644
  		}
  	}
  
-@@ -1556,29 +1617,30 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
+@@ -1556,29 +1632,30 @@ static void	DCmass_proxy_add_history(ZBX_DC_HISTORY *history, int history_num)
  	{
  		if (history[i].value_type == ITEM_VALUE_TYPE_LOG)
  		{
@@ -23682,6 +24273,198 @@ index 65f40df..9a911c2 100644
  		}
  	}
  
+@@ -2089,13 +2166,21 @@ void	init_database_cache(zbx_process_t p)
+ 
+ 	key_t	shm_key;
+ 	int	shm_id;
++	size_t	sz;
++	void	*ptr;
+ 
+ 	zbx_process = p;
+ 
+ 	ZBX_GET_SHM_DBCACHE_KEY(shm_key);
+ 
++	sz = sizeof(ZBX_DC_IDS);
++	if (0 != CONFIG_DBSYNCER_FORKS)
++		sz += sizeof(ZBX_DC_CACHE);
++
++	zabbix_log(LOG_LEVEL_DEBUG, "In init_database_cache() size:%d", (int)sz);
++
+ lbl_create:
+-	if ( -1 == (shm_id = shmget(shm_key, sizeof(ZBX_DC_CACHE), IPC_CREAT | IPC_EXCL | 0666 /* 0022 */)) )
++	if ( -1 == (shm_id = shmget(shm_key, sz, IPC_CREAT | IPC_EXCL | 0666 /* 0022 */)) )
+ 	{
+ 		if( EEXIST == errno )
+ 		{
+@@ -2123,9 +2208,9 @@ lbl_create:
+ 		}
+ 	}
+ 	
+-	cache = shmat(shm_id, 0, 0);
++	ptr = shmat(shm_id, 0, 0);
+ 
+-	if ((void*)(-1) == cache)
++	if ((void*)(-1) == ptr)
+ 	{
+ 		zabbix_log(LOG_LEVEL_CRIT, "Can't attach shared memory for database cache. [%s]",strerror(errno));
+ 		exit(FAIL);
+@@ -2137,11 +2222,27 @@ lbl_create:
+ 		exit(FAIL);
+ 	}
+ 
+-	cache->last_text = cache->text;
++	if(ZBX_MUTEX_ERROR == zbx_mutex_create_force(&cache_ids_lock, ZBX_MUTEX_CACHE_IDS))
++	{
++		zbx_error("Unable to create mutex for database cache");
++		exit(FAIL);
++	}
++
++	if (0 != CONFIG_DBSYNCER_FORKS)
++	{
++		cache = ptr;
++		cache->history_first = 0;
++		cache->history_num = 0;
++		cache->trends_num = 0;
++		cache->last_text = cache->text;
++
++		ptr += sizeof(ZBX_DC_CACHE);
++	}
++	ids = ptr;
++	memset(ids, 0, sizeof(ZBX_DC_IDS));
+ 
+ 	if (NULL == sql)
+ 		sql = zbx_malloc(sql, sql_allocated);
+-
+ }
+ 
+ /******************************************************************************
+@@ -2186,18 +2287,16 @@ static void	DCsync_all()
+  ******************************************************************************/
+ void	free_database_cache()
+ {
+-
+ 	key_t	shm_key;
+ 	int	shm_id;
+ 
+ 	zabbix_log(LOG_LEVEL_DEBUG, "In free_database_cache()");
+ 
+-	if (NULL == cache)
+-		return;
+-
+-	DCsync_all();
++	if (0 != CONFIG_DBSYNCER_FORKS)
++		DCsync_all();
+ 
+ 	LOCK_CACHE;
++	LOCK_CACHE_IDS;
+ 	
+ 	ZBX_GET_SHM_DBCACHE_KEY(shm_key);
+ 
+@@ -2214,8 +2313,104 @@ void	free_database_cache()
+ 	cache = NULL;
+ 
+ 	UNLOCK_CACHE;
++	UNLOCK_CACHE_IDS;
+ 
+ 	zbx_mutex_destroy(&cache_lock);
++	zbx_mutex_destroy(&cache_ids_lock);
+ 
+ 	zabbix_log(LOG_LEVEL_DEBUG,"End of free_database_cache()");
+ }
++
++/******************************************************************************
++ *                                                                            *
++ * Function: DCget_maxid                                                      *
++ *                                                                            *
++ * Purpose: Return next id for requested table                                *
++ *                                                                            *
++ * Parameters:                                                                *
++ *                                                                            *
++ * Return value:                                                              *
++ *                                                                            *
++ * Author: Alexander Vladishev                                                *
++ *                                                                            *
++ * Comments:                                                                  *
++ *                                                                            *
++ ******************************************************************************/
++zbx_uint64_t	DCget_nextid(const char *table_name, const char *field_name, int num)
++{
++	int		i, nodeid;
++	DB_RESULT	result;
++	DB_ROW		row;
++	const ZBX_TABLE	*table;
++	ZBX_DC_ID	*id;
++	zbx_uint64_t	min, max, nextid;
++
++	LOCK_CACHE_IDS;
++
++	zabbix_log(LOG_LEVEL_DEBUG, "In DCget_nextid %s.%s [%d]",
++			table_name, field_name, num);
++
++	for (i = 0; i < ZBX_IDS_SIZE; i++)
++	{
++		id = &ids->id[i];
++		if ('\0' == *id->table_name)
++			break;
++
++		if (0 == strcmp(id->table_name, table_name) && 0 == strcmp(id->field_name, field_name))
++		{
++			nextid = id->lastid + 1;
++			id->lastid += num;
++			UNLOCK_CACHE_IDS;
++
++			zabbix_log(LOG_LEVEL_DEBUG, "End of DCget_nextid %s.%s [" ZBX_FS_UI64 ":" ZBX_FS_UI64 "]",
++					table_name, field_name, nextid, id->lastid);
++			return nextid;
++		}
++	}
++
++	if (i == ZBX_IDS_SIZE)
++	{
++		zabbix_log(LOG_LEVEL_ERR, "Insufficient shared memory");
++		exit(-1);
++	}
++
++	zbx_strlcpy(id->table_name, table_name, sizeof(id->table_name));
++	zbx_strlcpy(id->field_name, field_name, sizeof(id->field_name));
++
++	table = DBget_table(table_name);
++	nodeid = CONFIG_NODEID >= 0 ? CONFIG_NODEID : 0;
++
++	min = (zbx_uint64_t)__UINT64_C(100000000000000) * (zbx_uint64_t)nodeid;
++	max = (zbx_uint64_t)__UINT64_C(100000000000000) * (zbx_uint64_t)nodeid;
++
++	if (table->flags & ZBX_SYNC)
++	{
++		min += (zbx_uint64_t)__UINT64_C(100000000000) * (zbx_uint64_t)nodeid;
++		max += (zbx_uint64_t)__UINT64_C(100000000000) * (zbx_uint64_t)nodeid + (zbx_uint64_t)__UINT64_C(99999999999);
++	}
++	else
++		max += (zbx_uint64_t)__UINT64_C(99999999999999);
++
++	result = DBselect("select max(%s) from %s where %s between " ZBX_FS_UI64 " and " ZBX_FS_UI64,
++			field_name,
++			table_name,
++			field_name,
++			min, max);
++
++	if (NULL == (row = DBfetch(result)) || SUCCEED == DBis_null(row[0]))
++		id->lastid = min + 1;
++	else
++		ZBX_STR2UINT64(id->lastid, row[0]);
++
++	nextid = id->lastid + 1;
++	id->lastid += num;
++
++	DBfree_result(result);
++
++	UNLOCK_CACHE_IDS;
++
++	zabbix_log(LOG_LEVEL_DEBUG, "End of DCget_nextid %s.%s [" ZBX_FS_UI64 ":" ZBX_FS_UI64 "]",
++			table_name, field_name, nextid, id->lastid);
++
++	return nextid;
++}
 diff --git a/src/libs/zbxdbcache/nextchecks.c b/src/libs/zbxdbcache/nextchecks.c
 index 3097d3c..6a59eff 100644
 --- a/src/libs/zbxdbcache/nextchecks.c
@@ -23923,10 +24706,18 @@ index 3097d3c..6a59eff 100644
 +	zbx_free(sql);
  }
 diff --git a/src/libs/zbxdbhigh/db.c b/src/libs/zbxdbhigh/db.c
-index c832bc1..95885ac 100644
+index c832bc1..c31e9ee 100644
 --- a/src/libs/zbxdbhigh/db.c
 +++ b/src/libs/zbxdbhigh/db.c
-@@ -555,6 +555,7 @@ int	DBupdate_trigger_value(DB_TRIGGER *trigger, int new_value, int now, const ch
+@@ -36,6 +36,7 @@
+ #include "events.h"
+ #include "threads.h"
+ #include "zbxserver.h"
++#include "dbcache.h"
+ 
+ const char *DBnode(const char *fieldid, const int nodeid)
+ {
+@@ -555,6 +556,7 @@ int	DBupdate_trigger_value(DB_TRIGGER *trigger, int new_value, int now, const ch
  	int		event_last_status;
  	int		event_prev_status;
  	int		update_status;
@@ -23934,7 +24725,7 @@ index c832bc1..95885ac 100644
  
  	if(reason==NULL)
  	{
-@@ -612,11 +613,13 @@ int	DBupdate_trigger_value(DB_TRIGGER *trigger, int new_value, int now, const ch
+@@ -612,11 +614,13 @@ int	DBupdate_trigger_value(DB_TRIGGER *trigger, int new_value, int now, const ch
  			}
  			else
  			{
@@ -23949,7 +24740,7 @@ index c832bc1..95885ac 100644
  			}
  		}
  
-@@ -809,7 +812,7 @@ void DBupdate_triggers_status_after_restart(void)
+@@ -809,7 +813,7 @@ void DBupdate_triggers_status_after_restart(void)
  
  void DBupdate_host_availability(DB_ITEM *item, int available, int clock, const char *error)
  {
@@ -23958,7 +24749,7 @@ index c832bc1..95885ac 100644
  	int	log_level = LOG_LEVEL_WARNING;
  
  	zabbix_log(LOG_LEVEL_DEBUG, "In update_host_availability()");
-@@ -818,11 +821,12 @@ void DBupdate_host_availability(DB_ITEM *item, int available, int clock, const c
+@@ -818,11 +822,12 @@ void DBupdate_host_availability(DB_ITEM *item, int available, int clock, const c
  	{
  		if (available == HOST_AVAILABLE_FALSE)
  		{
@@ -23972,7 +24763,7 @@ index c832bc1..95885ac 100644
  		}
  		return;
  	}
-@@ -845,12 +849,13 @@ void DBupdate_host_availability(DB_ITEM *item, int available, int clock, const c
+@@ -845,12 +850,13 @@ void DBupdate_host_availability(DB_ITEM *item, int available, int clock, const c
  				item->host_name,
  				CONFIG_UNAVAILABLE_DELAY);
  
@@ -23987,7 +24778,7 @@ index c832bc1..95885ac 100644
  
  		update_triggers_status_to_unknown(item->hostid, clock, "Host is unavailable.");
  	}
-@@ -921,24 +926,24 @@ void	DBproxy_update_host_availability(DB_ITEM *item, int available, int clock)
+@@ -921,24 +927,24 @@ void	DBproxy_update_host_availability(DB_ITEM *item, int available, int clock)
  
  int	DBupdate_item_status_to_notsupported(DB_ITEM *item, int clock, const char *error)
  {
@@ -24015,7 +24806,7 @@ index c832bc1..95885ac 100644
  
  	result = DBselect("select t.triggerid,t.expression,t.description,t.url,t.comments,t.status,t.value,t.priority"
  			" from triggers t,functions f,items i"
-@@ -1124,12 +1129,11 @@ int	DBadd_history_uint(zbx_uint64_t itemid, zbx_uint64_t value, int clock)
+@@ -1124,12 +1130,11 @@ int	DBadd_history_uint(zbx_uint64_t itemid, zbx_uint64_t value, int clock)
  
  int	DBadd_history_str(zbx_uint64_t itemid, char *value, int clock)
  {
@@ -24030,7 +24821,7 @@ index c832bc1..95885ac 100644
  	DBexecute("insert into history_str (clock,itemid,value) values (%d," ZBX_FS_UI64 ",'%s')",
  			clock,
  			itemid,
-@@ -1143,6 +1147,7 @@ int	DBadd_history_str(zbx_uint64_t itemid, char *value, int clock)
+@@ -1143,6 +1148,7 @@ int	DBadd_history_str(zbx_uint64_t itemid, char *value, int clock)
  				itemid,
  				value_esc);
  	}
@@ -24038,7 +24829,7 @@ index c832bc1..95885ac 100644
  
  	return SUCCEED;
  }
-@@ -1151,14 +1156,11 @@ int	DBadd_history_text(zbx_uint64_t itemid, char *value, int clock)
+@@ -1151,14 +1157,11 @@ int	DBadd_history_text(zbx_uint64_t itemid, char *value, int clock)
  {
  #ifdef HAVE_ORACLE
  	char		sql[MAX_STRING_LEN];
@@ -24056,7 +24847,7 @@ index c832bc1..95885ac 100644
  
  	zabbix_log(LOG_LEVEL_DEBUG, "In add_history_text()");
  
-@@ -1168,10 +1170,7 @@ int	DBadd_history_text(zbx_uint64_t itemid, char *value, int clock)
+@@ -1168,10 +1171,7 @@ int	DBadd_history_text(zbx_uint64_t itemid, char *value, int clock)
  
  	sqlo_autocommit_off(oracle);
  
@@ -24068,7 +24859,7 @@ index c832bc1..95885ac 100644
  	value_esc_max_len = strlen(value_esc);
  
  	/* alloate the lob descriptor */
-@@ -1259,12 +1258,12 @@ lbl_exit:
+@@ -1259,12 +1259,12 @@ lbl_exit:
  
  int	DBadd_history_log(zbx_uint64_t itemid, char *value, int clock, int timestamp, char *source, int severity, int lastlogsize)
  {
@@ -24083,7 +24874,7 @@ index c832bc1..95885ac 100644
  
  	DBexecute("insert into history_log (id,clock,itemid,timestamp,value,source,severity)"
  			" values (" ZBX_FS_UI64 ",%d," ZBX_FS_UI64 ",%d,'%s','%s',%d)",
-@@ -1276,6 +1275,7 @@ int	DBadd_history_log(zbx_uint64_t itemid, char *value, int clock, int timestamp
+@@ -1276,6 +1276,7 @@ int	DBadd_history_log(zbx_uint64_t itemid, char *value, int clock, int timestamp
  			source_esc,
  			severity);
  
@@ -24091,7 +24882,7 @@ index c832bc1..95885ac 100644
  	zbx_free(value_esc);
  
  	return SUCCEED;
-@@ -1512,12 +1512,15 @@ zbx_uint64_t DBget_proxy_lastaccess(const char *hostname)
+@@ -1512,12 +1513,15 @@ zbx_uint64_t DBget_proxy_lastaccess(const char *hostname)
  	zbx_uint64_t	res;
  	DB_RESULT	result;
  	DB_ROW		row;
@@ -24109,7 +24900,7 @@ index c832bc1..95885ac 100644
  
  	if (NULL == (row = DBfetch(result)) || SUCCEED == DBis_null(row[0])) {
  		zabbix_log(LOG_LEVEL_ERR, "Proxy \"%s\" not exists",
-@@ -1538,33 +1541,17 @@ zbx_uint64_t DBget_proxy_lastaccess(const char *hostname)
+@@ -1538,33 +1542,17 @@ zbx_uint64_t DBget_proxy_lastaccess(const char *hostname)
  int	DBadd_alert(zbx_uint64_t actionid, zbx_uint64_t userid, zbx_uint64_t eventid,  zbx_uint64_t mediatypeid, char *sendto, char *subject, char *message)
  {
  	int	now;
@@ -24147,7 +24938,7 @@ index c832bc1..95885ac 100644
  	DBexecute("insert into alerts (alertid,actionid,eventid,userid,clock,mediatypeid,sendto,subject,message,status,retries)"
  		" values (" ZBX_FS_UI64 "," ZBX_FS_UI64 "," ZBX_FS_UI64 "," ZBX_FS_UI64 ",%d," ZBX_FS_UI64 ",'%s','%s','%s',0,0)",
  		DBget_maxid("alerts","alertid"),
-@@ -1716,6 +1703,56 @@ char*	DBdyn_escape_string(const char *src)
+@@ -1716,6 +1704,56 @@ char*	DBdyn_escape_string(const char *src)
  	return dst;
  }
  
@@ -24204,7 +24995,7 @@ index c832bc1..95885ac 100644
  void	DBget_item_from_db(DB_ITEM *item,DB_ROW row)
  {
  	char		*s;
-@@ -1724,6 +1761,7 @@ void	DBget_item_from_db(DB_ITEM *item,DB_ROW row)
+@@ -1724,6 +1762,7 @@ void	DBget_item_from_db(DB_ITEM *item,DB_ROW row)
  
  	ZBX_STR2UINT64(item->itemid, row[0]);
  /*	item->itemid=atoi(row[0]); */
@@ -24212,7 +25003,7 @@ index c832bc1..95885ac 100644
  	item->key_orig=row[1];
  	item->host_name=row[2];
  	item->port=atoi(row[3]);
-@@ -1851,16 +1889,16 @@ void	DBget_item_from_db(DB_ITEM *item,DB_ROW row)
+@@ -1851,16 +1890,16 @@ void	DBget_item_from_db(DB_ITEM *item,DB_ROW row)
  		case ITEM_TYPE_SIMPLE:
  		case ITEM_TYPE_EXTERNAL:
  			key = zbx_dsprintf(key, "%s", item->key_orig);
@@ -24232,7 +25023,27 @@ index c832bc1..95885ac 100644
  	}
  }
  
-@@ -2103,16 +2141,18 @@ void	DBproxy_add_history_uint(zbx_uint64_t itemid, zbx_uint64_t value, int clock
+@@ -1935,10 +1974,18 @@ zbx_uint64_t DBget_maxid_num(char *tablename, char *fieldname, int num)
+ 	int		found  = FAIL, dbres, nodeid;
+ 	const ZBX_TABLE	*table;
+ 
+-	zabbix_log(LOG_LEVEL_DEBUG,"In DBget_maxid \"%s\".\"%s\"",
++	zabbix_log(LOG_LEVEL_DEBUG,"In DBget_maxid %s.%s",
+ 			tablename,
+ 			fieldname);
+ 
++	if ((0 == strcmp(tablename, "history_log") && 0 == strcmp(fieldname, "id")) ||
++			(0 == strcmp(tablename, "history_text") && 0 == strcmp(fieldname, "id")) ||
++			(0 == strcmp(tablename, "dservices") && 0 == strcmp(fieldname, "dserviceid")) ||
++			(0 == strcmp(tablename, "dhosts") && 0 == strcmp(fieldname, "dhostid")) ||
++			(0 == strcmp(tablename, "alerts") && 0 == strcmp(fieldname, "alertid")) ||
++			(0 == strcmp(tablename, "escalations") && 0 == strcmp(fieldname, "escalationid")))
++		return DCget_nextid(tablename, fieldname, num);
++
+ 	table = DBget_table(tablename);
+ 	nodeid = CONFIG_NODEID >= 0 ? CONFIG_NODEID : 0;
+ 
+@@ -2103,16 +2150,18 @@ void	DBproxy_add_history_uint(zbx_uint64_t itemid, zbx_uint64_t value, int clock
  
  void	DBproxy_add_history_str(zbx_uint64_t itemid, char *value, int clock)
  {
@@ -24253,7 +25064,7 @@ index c832bc1..95885ac 100644
  }
  
  void	DBproxy_add_history_text(zbx_uint64_t itemid, char *value, int clock)
-@@ -2133,11 +2173,11 @@ void	DBproxy_add_history_text(zbx_uint64_t itemid, char *value, int clock)
+@@ -2133,11 +2182,11 @@ void	DBproxy_add_history_text(zbx_uint64_t itemid, char *value, int clock)
  
  void	DBproxy_add_history_log(zbx_uint64_t itemid, char *value, int clock, int timestamp, char *source, int severity, int lastlogsize)
  {
@@ -24267,7 +25078,7 @@ index c832bc1..95885ac 100644
  	value_esc = DBdyn_escape_string(value);
  
  	DBexecute("insert into proxy_history (itemid,clock,timestamp,source,severity,value)"
-@@ -2150,6 +2190,7 @@ void	DBproxy_add_history_log(zbx_uint64_t itemid, char *value, int clock, int ti
+@@ -2150,6 +2199,7 @@ void	DBproxy_add_history_log(zbx_uint64_t itemid, char *value, int clock, int ti
  			value_esc);
  
  	zbx_free(value_esc);
@@ -24275,7 +25086,7 @@ index c832bc1..95885ac 100644
  }
  
  void	DBadd_condition_alloc(char **sql, int *sql_alloc, int *sql_offset, const char *fieldname, const zbx_uint64_t *values, const int num)
-@@ -2187,8 +2228,23 @@ void	DBadd_condition_alloc(char **sql, int *sql_alloc, int *sql_offset, const ch
+@@ -2187,8 +2237,23 @@ void	DBadd_condition_alloc(char **sql, int *sql_alloc, int *sql_offset, const ch
  		zbx_snprintf_alloc(sql, sql_alloc, sql_offset, 2, ")");
  }
  
@@ -24300,7 +25111,7 @@ index c832bc1..95885ac 100644
  char	*zbx_host_key_string(zbx_uint64_t itemid)
  {
  	DB_RESULT	result;
-@@ -2203,9 +2259,26 @@ char	*zbx_host_key_string(zbx_uint64_t itemid)
+@@ -2203,9 +2268,26 @@ char	*zbx_host_key_string(zbx_uint64_t itemid)
  	else
  		zbx_snprintf(string, sizeof(string), "???");
  
@@ -24327,7 +25138,7 @@ index c832bc1..95885ac 100644
  char	*zbx_host_key_string_by_item(DB_ITEM *item)
  {
  	zbx_snprintf(string, sizeof(string), "%s:%s", item->host_name, item->key);
-@@ -2213,6 +2286,23 @@ char	*zbx_host_key_string_by_item(DB_ITEM *item)
+@@ -2213,6 +2295,23 @@ char	*zbx_host_key_string_by_item(DB_ITEM *item)
  	return string;
  }
  
@@ -24351,7 +25162,7 @@ index c832bc1..95885ac 100644
  char	*zbx_host_key_function_string(zbx_uint64_t functionid)
  {
  	DB_RESULT	result;
-@@ -2227,6 +2317,8 @@ char	*zbx_host_key_function_string(zbx_uint64_t functionid)
+@@ -2227,6 +2326,8 @@ char	*zbx_host_key_function_string(zbx_uint64_t functionid)
  	else
  		zbx_snprintf(string, sizeof(string), "???");
  
@@ -26830,7 +27641,7 @@ index 1124f3f..fe9e50f 100644
  				CONFIG_POLLER_FORKS,
  				poller_num-1,
 diff --git a/src/zabbix_server/server.c b/src/zabbix_server/server.c
-index fa2087e..d274877 100644
+index fa2087e..24e9666 100644
 --- a/src/zabbix_server/server.c
 +++ b/src/zabbix_server/server.c
 @@ -50,8 +50,6 @@
@@ -26851,6 +27662,29 @@ index fa2087e..d274877 100644
  int	CONFIG_IPMIPOLLER_FORKS		= 0;
  int	CONFIG_TIMER_FORKS		= 1;
  int	CONFIG_TRAPPERD_FORKS		= 5;
+@@ -1080,8 +1078,7 @@ int MAIN_ZABBIX_ENTRY(void)
+ 		exit(FAIL);
+ 	}
+ 
+-	if (CONFIG_DBSYNCER_FORKS != 0)
+-		init_database_cache(ZBX_PROCESS_SERVER);
++	init_database_cache(ZBX_PROCESS_SERVER);
+ 
+ /*#define CALC_TREND*/
+ 
+@@ -1304,11 +1301,7 @@ void	zbx_on_exit()
+ 	zbx_sleep(2); /* wait for all threads closing */
+ 
+ 	DBconnect(ZBX_DB_CONNECT_EXIT);
+-	
+-	if(CONFIG_DBSYNCER_FORKS!=0)
+-	{
+-		free_database_cache();
+-	}
++	free_database_cache();
+ 	DBclose();
+ 
+ 	zbx_mutex_destroy(&node_sync_access);
 diff --git a/src/zabbix_server/utils/nodechange.c b/src/zabbix_server/utils/nodechange.c
 index 60a99e0..ca414d1 100644
 --- a/src/zabbix_server/utils/nodechange.c

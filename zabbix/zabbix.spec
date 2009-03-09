@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -465,6 +465,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Mon Mar  9 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-5
+- Update pre patch due to incomplete fix for security problems.
+
 * Wed Mar  4 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.2-4
 - Update to a SVN snapshot of the upstream 1.6 branch to fix security
   issue (BZ#488501)
