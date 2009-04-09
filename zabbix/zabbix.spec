@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -54,6 +54,9 @@ companies with a multitude of servers.
 %package docs
 Summary:         Zabbix documentation
 Group:           Documentation
+%if 0%{?fedora} > 9
+BuildArch:       noarch
+%endif
 
 %description docs
 Zabbix Reference Manual in PDF.
@@ -496,6 +499,9 @@ fi
 
 
 %changelog
+* Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-2
+- make the -docs subpackage noarch
+
 * Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-1
 - update to 1.6.4
 - remove the cpustat patch, it was integreated into upstream
