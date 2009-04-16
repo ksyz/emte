@@ -1,6 +1,6 @@
 Name:           zabbix
 Version:        1.6.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -425,6 +425,25 @@ then
 fi
 :
 
+%postun server
+if [ $1 -ge 1 ]
+then
+  /sbin/service zabbix-server try-restart >/dev/null 2>&1 || :
+fi
+
+%postun proxy
+if [ $1 -ge 1 ]
+then
+  /sbin/service zabbix-proxy try-restart >/dev/null 2>&1 || :
+fi
+
+%postun agent
+if [ $1 -ge 1 ]
+then
+  /sbin/service zabbix-agent try-restart >/dev/null 2>&1 || :
+fi
+
+
 %post web
 # move existing config file on update
 if [ "$1" -ge "1" ]
@@ -517,10 +536,11 @@ fi
 
 
 %changelog
-* Thu Apr  9 2009 Ville Skyttä <ville.skytta at iki.fi>
+* Fri Apr 17 2009 Ville Skyttä <ville.skytta at iki.fi> - 1.6.4-3
 - Tighten configuration file permissions.
 - Ensure zero exit status from scriptlets.
 - Improve init script LSB compliance.
+- Restart running services on package upgrades.
 
 * Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-2
 - make the -docs subpackage noarch
