@@ -386,9 +386,10 @@ then
   chmod 0640 %{_sysconfdir}/zabbix/zabbix_server.conf
   chown root:zabbix %{_sysconfdir}/zabbix/zabbix_server.conf
 fi
+:
 
 %post agent
-/sbin/chkconfig --add zabbix-agent
+/sbin/chkconfig --add zabbix-agent || :
 
 %post proxy
 /sbin/chkconfig --add zabbix-proxy
@@ -398,27 +399,31 @@ then
   chmod 0640 %{_sysconfdir}/zabbix/zabbix_proxy.conf
   chown root:zabbix %{_sysconfdir}/zabbix/zabbix_proxy.conf
 fi
+:
 
 %preun server
 if [ "$1" = 0 ]
 then
-  /sbin/service zabbix-server stop >/dev/null 2>&1 || :
+  /sbin/service zabbix-server stop >/dev/null 2>&1
   /sbin/chkconfig --del zabbix-server
 fi
+:
 
 %preun agent
 if [ "$1" = 0 ]
 then
-  /sbin/service zabbix-agent stop >/dev/null 2>&1 || :
+  /sbin/service zabbix-agent stop >/dev/null 2>&1
   /sbin/chkconfig --del zabbix-agent
 fi
+:
 
 %preun proxy
 if [ "$1" = 0 ]
 then
-  /sbin/service zabbix-proxy stop >/dev/null 2>&1 || :
+  /sbin/service zabbix-proxy stop >/dev/null 2>&1
   /sbin/chkconfig --del zabbix-proxy
 fi
+:
 
 %post web
 # move existing config file on update
@@ -430,6 +435,7 @@ then
         chown apache:apache %{_sysconfdir}/zabbix/web/zabbix.conf.php
     fi
 fi
+:
 
 
 %files
@@ -513,6 +519,7 @@ fi
 %changelog
 * Thu Apr  9 2009 Ville Skyttä <ville.skytta at iki.fi>
 - Tighten configuration file permissions.
+- Ensure zero exit status from scriptlets.
 
 * Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-2
 - make the -docs subpackage noarch
