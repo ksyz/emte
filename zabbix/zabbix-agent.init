@@ -1,7 +1,9 @@
-#! /bin/sh
+#!/bin/sh
 #
 # chkconfig: - 85 15
-# description: zabbix agent daemon
+# description: ZABBIX agent daemon
+# processname: zabbix_agentd
+# config: /etc/zabbix/zabbix_agentd.conf
 #
 
 ### BEGIN INIT INFO
@@ -10,58 +12,65 @@
 # Required-Stop: $local_fs $network
 # Default-Start:
 # Default-Stop: 0 1 2 3 4 5 6
-# Short-Description: start and stop zabbix agent
-# Description: Zabbix Agent
+# Short-Description: Start and stop ZABBIX agent
+# Description: ZABBIX agent
 ### END INIT INFO
-
-# zabbix details
-ZABBIX_AGENTD=/usr/sbin/zabbix_agentd
-CONF=/etc/zabbix/zabbix_agentd.conf
-PIDFILE=/var/run/zabbix-agent.pid
 
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-# Source networking configuration.
-. /etc/sysconfig/network
+exec=/usr/sbin/zabbix_agentd
+prog=${exec##*/}
+lockfile=/var/lock/subsys/zabbix-agent
 
-# Check that networking is up.
-[ ${NETWORKING} = "no" ] && exit 0
+start()
+{
+    echo -n $"Starting ZABBIX agent: "
+    daemon $exec
+    rv=$?
+    echo
+    [ $rv -eq 0 ] && touch $lockfile
+    return $rv
+}
 
-[ -x $ZABBIX_AGENTD ] || exit 5
-[ -e $CONF ] || exit 6
+stop()
+{
+    echo -n $"Shutting down ZABBIX agent: "
+    killproc $prog
+    rv=$?
+    echo
+    [ $rv -eq 0 ] && rm -f $lockfile
+    return $rv
+}
 
-RETVAL=0
+restart()
+{
+    stop
+    start
+}
 
 case "$1" in
-    start)
-        echo -n "Starting zabbix agent: "
-        daemon $ZABBIX_AGENTD -c $CONF
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/zabbix-agent
+    start|stop|restart)
+        $1
         ;;
-    stop)
-        echo -n "Shutting down zabbix agent: "
-        killproc zabbix_agentd
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/zabbix-agent
-        ;;
-    restart|reload)
-        $0 stop
-        $0 start
-        RETVAL=$?
+    force-reload)
+        restart
         ;;
     status)
-        status zabbix_agentd
-        RETVAL=$?
+        status $prog
+        ;;
+    try-restart|condrestart)
+        if status $prog >/dev/null ; then
+            restart
+        fi
+        ;;
+    reload)
+        action $"Service ${0##*/} does not support the reload action: " /bin/false
+        exit 3
         ;;
     *)
-	echo "Usage: $0 {start|stop|restart|reload|status}"
-	exit 1
+	echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+	exit 2
 	;;
 esac
-
-exit $RETVAL
 

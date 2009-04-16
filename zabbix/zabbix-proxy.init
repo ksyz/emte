@@ -1,75 +1,84 @@
-#! /bin/sh
+#!/bin/sh
 #
 # chkconfig: - 85 15
-# description: zabbix proxy daemon
+# description: ZABBIX proxy daemon
+# config: /etc/zabbix/zabbix_proxy.conf
 #
 
 ### BEGIN INIT INFO
-# Provides: zabbix
+# Provides: zabbix-proxy
 # Required-Start: $local_fs $network
 # Required-Stop: $local_fs $network
 # Default-Start:
 # Default-Stop: 0 1 2 3 4 5 6
-# Short-Description: start and stop zabbix proxy
-# Description: Zabbix Proxy
+# Short-Description: Start and stop ZABBIX proxy
+# Description: ZABBIX proxy
 ### END INIT INFO
-
-# zabbix details
-if [ -x /usr/sbin/zabbix_proxy_mysql ]; then
-    ZABBIX_PROXY=zabbix_proxy_mysql
-elif [ -x /usr/sbin/zabbix_proxy_pgsql ]; then
-    ZABBIX_PROXY=zabbix_proxy_pgsql
-elif [ -x /usr/sbin/zabbix_proxy_sqlite3 ]; then
-    ZABBIX_PROXY=zabbix_proxy_sqlite3
-else
-    exit 5
-fi
-
-CONF=/etc/zabbix/zabbix_proxy.conf
-PIDFILE=/var/run/zabbix.pid
 
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-# Source networking configuration.
-. /etc/sysconfig/network
+if [ -x /usr/sbin/zabbix_proxy_mysql ]; then
+    exec=zabbix_proxy_mysql
+elif [ -x /usr/sbin/zabbix_proxy_pgsql ]; then
+    exec=zabbix_proxy_pgsql
+elif [ -x /usr/sbin/zabbix_proxy_sqlite3 ]; then
+    exec=zabbix_proxy_sqlite3
+else
+    exit 5
+fi
+prog=${exec##*/}
+lockfile=/var/lock/subsys/zabbix-proxy
+conf=
 
-# Check that networking is up.
-[ ${NETWORKING} = "no" ] && exit 0
+start()
+{
+    echo -n $"Starting ZABBIX proxy: "
+    daemon $exec
+    rv=$?
+    echo
+    [ $rv -eq 0 ] && touch $lockfile
+    return $rv
+}
 
-[ -e $CONF ] || exit 6
+stop()
+{
+    echo -n $"Shutting down ZABBIX proxy: "
+    killproc $prog
+    rv=$?
+    echo
+    [ $rv -eq 0 ] && rm -f $lockfile
+    return $rv
+}
 
-RETVAL=0
+restart()
+{
+    stop
+    start
+}
 
 case "$1" in
-    start)
-        echo -n "Starting Zabbix proxy: "
-        daemon $ZABBIX_PROXY -c $CONF
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/zabbix-proxy
+    start|stop|restart)
+        $1
         ;;
-    stop)
-        echo -n "Shutting down Zabbix proxy: "
-        killproc $ZABBIX_PROXY
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/zabbix-proxy
-        ;;
-    restart|reload)
-        $0 stop
-        $0 start
-        RETVAL=$?
+    force-reload)
+        restart
         ;;
     status)
-        status $ZABBIX_PROXY
-        RETVAL=$?
+        status $prog
+        ;;
+    try-restart|condrestart)
+        if status $prog >/dev/null ; then
+            restart
+        fi
+        ;;
+    reload)
+        action $"Service ${0##*/} does not support the reload action: " /bin/false
+        exit 3
         ;;
     *)
-	echo "Usage: $0 {start|stop|restart|reload|status}"
-	exit 1
+	echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+	exit 2
 	;;
 esac
-
-exit $RETVAL
 

@@ -520,6 +520,7 @@ fi
 * Thu Apr  9 2009 Ville Skyttä <ville.skytta at iki.fi>
 - Tighten configuration file permissions.
 - Ensure zero exit status from scriptlets.
+- Improve init script LSB compliance.
 
 * Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-2
 - make the -docs subpackage noarch
