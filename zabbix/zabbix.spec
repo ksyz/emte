@@ -380,12 +380,24 @@ getent passwd zabbix > /dev/null || \
 
 %post server
 /sbin/chkconfig --add zabbix-server
+if [ $1 -gt 1 ]
+then
+  # Apply permissions also in *.rpmnew upgrades from old permissive ones
+  chmod 0640 %{_sysconfdir}/zabbix/zabbix_server.conf
+  chown root:zabbix %{_sysconfdir}/zabbix/zabbix_server.conf
+fi
 
 %post agent
 /sbin/chkconfig --add zabbix-agent
 
 %post proxy
 /sbin/chkconfig --add zabbix-proxy
+if [ $1 -gt 1 ]
+then
+  # Apply permissions also in *.rpmnew upgrades from old permissive ones
+  chmod 0640 %{_sysconfdir}/zabbix/zabbix_proxy.conf
+  chown root:zabbix %{_sysconfdir}/zabbix/zabbix_proxy.conf
+fi
 
 %preun server
 if [ "$1" = 0 ]
@@ -433,7 +445,7 @@ fi
 
 %files server
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/zabbix/zabbix_server.conf
+%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_server.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %{_sysconfdir}/init.d/zabbix-server
 
@@ -465,7 +477,7 @@ fi
 
 %files proxy
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/zabbix/zabbix_proxy.conf
+%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %{_sysconfdir}/init.d/zabbix-proxy
 
@@ -483,7 +495,7 @@ fi
 
 %files web
 %defattr(-,root,root,-)
-%dir %attr(0755,apache,apache) %{_sysconfdir}/zabbix/web
+%dir %attr(0750,apache,apache) %{_sysconfdir}/zabbix/web
 %ghost %attr(0644,apache,apache) %config(noreplace) %{_sysconfdir}/zabbix/web/zabbix.conf.php
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/zabbix.conf
 %{_datadir}/zabbix
@@ -499,6 +511,9 @@ fi
 
 
 %changelog
+* Thu Apr  9 2009 Ville Skyttä <ville.skytta at iki.fi>
+- Tighten configuration file permissions.
+
 * Thu Apr  9 2009 Dan Horák <dan[at]danny.cz> - 1.6.4-2
 - make the -docs subpackage noarch
 
