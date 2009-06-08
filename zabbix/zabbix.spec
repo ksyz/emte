@@ -1,6 +1,13 @@
+# TODO, maybe sometime:
+# * Do something about mutex errors sometimes occurring when init scripts'
+#   restart is invoked; something like "sleep 2" between stop and start?
+# * Use "Include" in zabbix_{agentd,proxy,server}.conf, point to corresponding
+#   /etc/zabbix/zabbix_*.conf.d/ dir; needs patching in order to not load
+#   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
+
 Name:           zabbix
 Version:        1.6.4
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -23,33 +30,33 @@ BuildRequires:   net-snmp-devel
 BuildRequires:   openldap-devel
 BuildRequires:   gnutls-devel
 BuildRequires:   iksemel-devel
-BuildRequires:   curl-devel
 BuildRequires:   sqlite-devel
 BuildRequires:   unixODBC-devel
-BuildRequires:   OpenIPMI-devel
+%if 0%{!?el4:1}
+BuildRequires:   curl-devel >= 7.13.1
+BuildRequires:   OpenIPMI-devel >= 2
+%endif
 
 Requires:        logrotate
 Requires(pre):   /usr/sbin/useradd
 
 %description
-ZABBIX is software that monitors numerous parameters of a
-network and the health and integrity of servers. ZABBIX
-uses a flexible notification mechanism that allows users
-to configure e-mail based alerts for virtually any event.
-This allows a fast reaction to server problems. ZABBIX
-offers excellent reporting and data visualisation features
-based on the stored data. This makes ZABBIX ideal for
+ZABBIX is software that monitors numerous parameters of a network and
+the health and integrity of servers. ZABBIX uses a flexible
+notification mechanism that allows users to configure e-mail based
+alerts for virtually any event.  This allows a fast reaction to server
+problems. ZABBIX offers excellent reporting and data visualisation
+features based on the stored data. This makes ZABBIX ideal for
 capacity planning.
 
-ZABBIX supports both polling and trapping. All ZABBIX
-reports and statistics, as well as configuration
-parameters are accessed through a web-based front end. A
-web-based front end ensures that the status of your network
-and the health of your servers can be assessed from any
-location. Properly configured, ZABBIX can play an important
-role in monitoring IT infrastructure. This is equally true
-for small organisations with a few servers and for large
-companies with a multitude of servers.
+ZABBIX supports both polling and trapping. All ZABBIX reports and
+statistics, as well as configuration parameters are accessed through a
+web-based front end. A web-based front end ensures that the status of
+your network and the health of your servers can be assessed from any
+location. Properly configured, ZABBIX can play an important role in
+monitoring IT infrastructure. This is equally true for small
+organisations with a few servers and for large companies with a
+multitude of servers.
 
 %package docs
 Summary:         Zabbix documentation
@@ -251,9 +258,10 @@ common_flags="
     --enable-proxy
     --enable-ipv6
     --with-net-snmp
-    --with-openipmi
     --with-ldap
-    --with-libcurl
+%if 0%{!?el4:1}
+    --with-openipmi
+%endif
     --with-jabber
     --with-unixodbc"
 
@@ -348,23 +356,25 @@ install -m 0755 -p src/zabbix_proxy/zabbix_proxy_* $RPM_BUILD_ROOT%{_sbindir}/
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a
 
 # copy sql files to appropriate per package locations
-docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-server-mysql-%{version}
-install -dm 755 $docdir
-cp -p --parents create/schema/mysql.sql $docdir
-cp -p --parents create/data/data.sql $docdir
-cp -p --parents create/data/images_mysql.sql $docdir
-cp -pR --parents upgrades/dbpatches/1.6/mysql $docdir
-docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-server-pgsql-%{version}
-install -dm 755 $docdir
-cp -p --parents create/schema/postgresql.sql $docdir
-cp -p --parents create/data/data.sql $docdir
-cp -p --parents create/data/images_pgsql.sql $docdir
-cp -pR --parents upgrades/dbpatches/1.6/postgresql $docdir
-docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-server-sqlite3-%{version}
-install -dm 755 $docdir
-cp -p --parents create/schema/sqlite.sql $docdir
-cp -p --parents create/data/data.sql $docdir
-cp -p --parents create/data/images_sqlite3.sql $docdir
+for pkg in proxy server ; do
+    docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-$pkg-mysql-%{version}
+    install -dm 755 $docdir
+    cp -p --parents create/schema/mysql.sql $docdir
+    cp -p --parents create/data/data.sql $docdir
+    cp -p --parents create/data/images_mysql.sql $docdir
+    cp -pR --parents upgrades/dbpatches/1.6/mysql $docdir
+    docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-$pkg-pgsql-%{version}
+    install -dm 755 $docdir
+    cp -p --parents create/schema/postgresql.sql $docdir
+    cp -p --parents create/data/data.sql $docdir
+    cp -p --parents create/data/images_pgsql.sql $docdir
+    cp -pR --parents upgrades/dbpatches/1.6/postgresql $docdir
+    docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-$pkg-sqlite3-%{version}
+    install -dm 755 $docdir
+    cp -p --parents create/schema/sqlite.sql $docdir
+    cp -p --parents create/data/data.sql $docdir
+    cp -p --parents create/data/images_sqlite3.sql $docdir
+done
 # remove extraneous ones
 rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/create
 
@@ -508,14 +518,17 @@ fi
 
 %files proxy-mysql
 %defattr(-,root,root,-)
+%{_docdir}/%{name}-proxy-mysql-%{version}/
 %{_sbindir}/zabbix_proxy_mysql
 
 %files proxy-pgsql
 %defattr(-,root,root,-)
+%{_docdir}/%{name}-proxy-pgsql-%{version}/
 %{_sbindir}/zabbix_proxy_pgsql
 
 %files proxy-sqlite3
 %defattr(-,root,root,-)
+%{_docdir}/%{name}-proxy-sqlite3-%{version}/
 %{_sbindir}/zabbix_proxy_sqlite3
 
 %files web
@@ -536,6 +549,12 @@ fi
 
 
 %changelog
+* Mon Jun  8 2009 Ville Skyttä <ville.skytta at iki.fi> - 1.6.4-4
+- Start agent after and shut down before proxy and server by default.
+- Include database schemas also in -proxy-* docs.
+- Make buildable on EL-4 (without libcurl, OpenIPMI).
+- Reformat description.
+
 * Fri Apr 17 2009 Ville Skyttä <ville.skytta at iki.fi> - 1.6.4-3
 - Tighten configuration file permissions.
 - Ensure zero exit status from scriptlets.
