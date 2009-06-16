@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.6.4
-Release:        4%{?dist}
+Version:        1.6.5
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -549,6 +549,19 @@ fi
 
 
 %changelog
+* Mon Jun  8 2009 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6.5-1
+- Update to 1.6.5, see http://sourceforge.net/mailarchive/message.php?msg_name=4A37A2CA.8050503%40zabbix.com for the full release notes.
+- 
+- It is recommended to create the following indexes in order to speed up
+- performance of ZABBIX front-end as well as server side (ignore it if the
+- indexes already exist):
+- 
+- CREATE UNIQUE INDEX history_log_2 on history_log (itemid,id);
+- CREATE UNIQUE INDEX history_text_2 on history_text (itemid,id);
+- CREATE INDEX graphs_items_1 on graphs_items (itemid);
+- CREATE INDEX graphs_items_2 on graphs_items (graphid);
+- CREATE INDEX services_1 on services (triggerid);
+
 * Mon Jun  8 2009 Ville Skyttä <ville.skytta at iki.fi> - 1.6.4-4
 - Start agent after and shut down before proxy and server by default.
 - Include database schemas also in -proxy-* docs.
