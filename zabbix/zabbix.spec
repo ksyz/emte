@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.6.5
-Release:        3%{?dist}
+Version:        1.6.6
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -549,6 +549,10 @@ fi
 
 
 %changelog
+* Sat Aug 29 2009 Dan Horák <dan[at]danny.cz> - 1.6.6-1
+- Update to 1.6.6
+- Upstream changelog: http://www.zabbix.com/rn1.6.6.php
+
 * Fri Aug 21 2009 Tomas Mraz <tmraz@redhat.com> - 1.6.5-3
 - rebuilt with new openssl
 
