@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.6.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -549,6 +549,9 @@ fi
 
 
 %changelog
+* Wed Nov 25 2009 Dan Horák <dan[at]danny.cz> - 1.6.6-2
+- rebuilt with net-snmp 5.5
+
 * Sat Aug 29 2009 Dan Horák <dan[at]danny.cz> - 1.6.6-1
 - Update to 1.6.6
 - Upstream changelog: http://www.zabbix.com/rn1.6.6.php
