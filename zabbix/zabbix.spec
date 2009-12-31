@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.6.6
-Release:        2%{?dist}
+Version:        1.6.8
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -549,6 +549,11 @@ fi
 
 
 %changelog
+* Thu Dec 31 2009 Dan Horák <dan[at]danny.cz> - 1.6.8-1
+- Update to 1.6.8
+- Upstream changelog: http://www.zabbix.com/rn1.6.8.php
+- fixes 2 issues from #551331
+
 * Wed Nov 25 2009 Dan Horák <dan[at]danny.cz> - 1.6.6-2
 - rebuilt with net-snmp 5.5
 
