@@ -6,7 +6,7 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.6.8
+Version:        1.8
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -179,6 +179,7 @@ BuildArch:       noarch
 Requires:        php
 Requires:        php-gd
 Requires:        php-bcmath
+Requires:        php-mbstring
 Requires:        zabbix = %{version}-%{release}
 Requires:        zabbix-web-database = %{version}-%{release}
 
@@ -236,13 +237,11 @@ Zabbix web frontend for SQLite
 %setup0 -q
 %patch0 -p1
 
-chmod -R a+rX .
-
-# nuke erronious executable permissions
-chmod -x src/zabbix_agent/eventlog.c
+# remove executable permissions
+chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
 
 # fix up some lib64 issues
-%{__perl} -pi.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
+sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
     configure
 
 # kill off .htaccess files, options set in SOURCE1
@@ -363,12 +362,14 @@ for pkg in proxy server ; do
     cp -p --parents create/data/data.sql $docdir
     cp -p --parents create/data/images_mysql.sql $docdir
     cp -pR --parents upgrades/dbpatches/1.6/mysql $docdir
+    cp -pR --parents upgrades/dbpatches/1.8/mysql $docdir
     docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-$pkg-pgsql-%{version}
     install -dm 755 $docdir
     cp -p --parents create/schema/postgresql.sql $docdir
     cp -p --parents create/data/data.sql $docdir
     cp -p --parents create/data/images_pgsql.sql $docdir
     cp -pR --parents upgrades/dbpatches/1.6/postgresql $docdir
+    cp -pR --parents upgrades/dbpatches/1.8/postgresql $docdir
     docdir=$RPM_BUILD_ROOT%{_docdir}/%{name}-$pkg-sqlite3-%{version}
     install -dm 755 $docdir
     cp -p --parents create/schema/sqlite.sql $docdir
@@ -476,13 +477,14 @@ fi
 
 %files docs
 %defattr(-,root,root,-)
-%doc docs/*.pdf
+%doc docs/README
 
 %files server
 %defattr(-,root,root,-)
 %attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_server.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %{_sysconfdir}/init.d/zabbix-server
+%{_mandir}/man8/zabbix_server.8*
 
 %files server-mysql
 %defattr(-,root,root,-)
@@ -507,14 +509,18 @@ fi
 %{_sysconfdir}/init.d/zabbix-agent
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
-%{_sbindir}/zabbix_sender
-%{_sbindir}/zabbix_get
+%{_bindir}/zabbix_sender
+%{_bindir}/zabbix_get
+%{_mandir}/man1/zabbix_sender.1*
+%{_mandir}/man1/zabbix_get.1*
+%{_mandir}/man8/zabbix_agentd.8*
 
 %files proxy
 %defattr(-,root,root,-)
 %attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %{_sysconfdir}/init.d/zabbix-proxy
+%{_mandir}/man8/zabbix_proxy.8*
 
 %files proxy-mysql
 %defattr(-,root,root,-)
@@ -549,6 +555,9 @@ fi
 
 
 %changelog
+* Tue Jan 26 2010 Dan Horák <dan[at]danny.cz> - 1.8-1
+- Update to 1.8
+
 * Thu Dec 31 2009 Dan Horák <dan[at]danny.cz> - 1.6.8-1
 - Update to 1.6.8
 - Upstream changelog: http://www.zabbix.com/rn1.6.8.php
