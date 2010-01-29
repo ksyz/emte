@@ -6,7 +6,7 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.8
+Version:        1.8.1
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -555,6 +555,9 @@ fi
 
 
 %changelog
+* Fri Jan 29 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-1
+- Update to 1.8.1
+
 * Tue Jan 26 2010 Dan Horák <dan[at]danny.cz> - 1.8-1
 - Update to 1.8
 
