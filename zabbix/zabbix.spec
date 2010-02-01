@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -21,6 +21,8 @@ Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 # local rules for config files
 Patch0:         zabbix-1.6.4-web-config.patch
+# close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
+Patch1:         zabbix-1.8.1-cloexec.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -236,6 +238,7 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q
 %patch0 -p1
+%patch1 -p1 -b .cloexec
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -555,6 +558,9 @@ fi
 
 
 %changelog
+* Mon Feb  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-2
+- close fd on exec (#559221)
+
 * Fri Jan 29 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-1
 - Update to 1.8.1
 
