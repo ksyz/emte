@@ -1,0 +1,13 @@
+diff -up zabbix-1.8.1/frontends/php/include/config.inc.php.orig zabbix-1.8.1/frontends/php/include/config.inc.php
+--- zabbix-1.8.1/frontends/php/include/config.inc.php.orig	2010-01-27 22:22:45.000000000 +0100
++++ zabbix-1.8.1/frontends/php/include/config.inc.php	2010-02-02 12:40:55.000000000 +0100
+@@ -124,8 +124,7 @@ function __autoload($class_name){
+ 	$ZBX_LOCALNODEID = 0;
+ 	$ZBX_LOCMASTERID = 0;
+ 
+-	$ZBX_CONFIGURATION_FILE = './conf/zabbix.conf.php';
+-	$ZBX_CONFIGURATION_FILE = realpath(dirname($ZBX_CONFIGURATION_FILE)).'/'.basename($ZBX_CONFIGURATION_FILE);
++	$ZBX_CONFIGURATION_FILE = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ 	unset($show_setup);
+ 
