@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -240,8 +240,6 @@ Zabbix web frontend for SQLite
 %patch0 -p1
 %patch1 -p1 -b .cloexec
 
-# set timestamp on modified config file
-touch -r frontends/php/css.css frontends/php/include/config.inc.php
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -254,10 +252,14 @@ sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
 rm -f frontends/php/include/.htaccess
 rm -f frontends/php/include/classes/.htaccess
 
+# set timestamp on modified config file and directories
+touch -r frontends/php/css.css frontends/php/include/config.inc.php frontends/php/include frontends/php/include/classes
+
 
 %build
 
 common_flags="
+    --enable-dependency-tracking
     --enable-server
     --enable-agent
     --enable-proxy
@@ -561,6 +563,9 @@ fi
 
 
 %changelog
+* Mon Feb  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-4
+- enable dependency tracking
+
 * Mon Feb  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-3
 - updated the web-config patch
 
