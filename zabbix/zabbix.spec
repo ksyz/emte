@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -23,6 +23,8 @@ Source5:        zabbix-logrotate.in
 Patch0:         zabbix-1.8.1-web-config.patch
 # close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
 Patch1:         zabbix-1.8.1-cloexec.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=564932
+Patch2:         zabbix-1.8.1-dso.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -239,6 +241,7 @@ Zabbix web frontend for SQLite
 %setup0 -q
 %patch0 -p1
 %patch1 -p1 -b .cloexec
+%patch2 -p1 -b .dso
 
 
 # remove executable permissions
@@ -563,6 +566,9 @@ fi
 
 
 %changelog
+* Sun Feb 13 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-5
+- fixed linking with the new --no-add-needed default (#564932)
+
 * Mon Feb  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-4
 - enable dependency tracking
 

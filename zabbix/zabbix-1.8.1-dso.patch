@@ -1,0 +1,17 @@
+diff -up zabbix-1.8.1/configure.dso zabbix-1.8.1/configure
+--- zabbix-1.8.1/configure.dso	2010-02-14 13:14:24.000000000 +0100
++++ zabbix-1.8.1/configure	2010-02-14 13:16:12.000000000 +0100
+@@ -12541,11 +12541,11 @@ echo "${ECHO_T}no" >&6; }
+        if test "x$found_ldap" != "xno" ; then
+ 
+                if test "x$enable_static" = "xyes"; then
+-                       LDAP_LIBS=" -llber -lgnutls -lpthread -lsasl2 $LDAP_LIBS"
++                       LDAP_LIBS=" -lgnutls -lpthread -lsasl2 $LDAP_LIBS"
+                fi
+ 
+                LDAP_CPPFLAGS=-I$LDAP_INCDIR
+-               LDAP_LDFLAGS="-L$LDAP_LIBDIR -lldap $LDAP_LIBS"
++               LDAP_LDFLAGS="-L$LDAP_LIBDIR -lldap -llber $LDAP_LIBS"
+ 
+                found_ldap="yes"
+ 
