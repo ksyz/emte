@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -20,7 +20,7 @@ Source3:        zabbix-agent.init
 Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 # local rules for config files
-Patch0:         zabbix-1.8.1-web-config.patch
+Patch0:         zabbix-1.8.1-config.patch
 # close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
 Patch1:         zabbix-1.8.1-cloexec.patch
 # https://bugzilla.redhat.com/show_bug.cgi?id=564932
@@ -184,6 +184,7 @@ Requires:        php
 Requires:        php-gd
 Requires:        php-bcmath
 Requires:        php-mbstring
+Requires:        dejavu-sans-fonts
 Requires:        zabbix = %{version}-%{release}
 Requires:        zabbix-web-database = %{version}-%{release}
 
@@ -243,6 +244,8 @@ Zabbix web frontend for SQLite
 %patch1 -p1 -b .cloexec
 %patch2 -p1 -b .dso
 
+# remove included fonts
+rm -rf frontends/php/fonts
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -256,7 +259,10 @@ rm -f frontends/php/include/.htaccess
 rm -f frontends/php/include/classes/.htaccess
 
 # set timestamp on modified config file and directories
-touch -r frontends/php/css.css frontends/php/include/config.inc.php frontends/php/include frontends/php/include/classes
+touch -r frontends/php/css.css frontends/php/include/config.inc.php \
+    frontends/php/include/defines.inc.php \
+    frontends/php/include \
+    frontends/php/include/classes
 
 
 %build
@@ -566,6 +572,9 @@ fi
 
 
 %changelog
+* Wed Feb 24 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-6
+- use system fonts
+
 * Sun Feb 13 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-5
 - fixed linking with the new --no-add-needed default (#564932)
 
