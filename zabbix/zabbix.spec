@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.1
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -39,6 +39,9 @@ BuildRequires:   unixODBC-devel
 %if 0%{!?el4:1}
 BuildRequires:   curl-devel >= 7.13.1
 BuildRequires:   OpenIPMI-devel >= 2
+%endif
+%if 0%{?fedora} || 0%{?rhel} >= 6
+BuildRequires:   libssh2-devel
 %endif
 
 Requires:        logrotate
@@ -184,6 +187,7 @@ Requires:        php
 Requires:        php-gd
 Requires:        php-bcmath
 Requires:        php-mbstring
+Requires:        php-xml
 Requires:        dejavu-sans-fonts
 Requires:        zabbix = %{version}-%{release}
 Requires:        zabbix-web-database = %{version}-%{release}
@@ -279,7 +283,11 @@ common_flags="
     --with-openipmi
 %endif
     --with-jabber
-    --with-unixodbc"
+    --with-unixodbc
+%if 0%{?fedora} || 0%{?rhel} >= 6
+    --with-ssh2
+%endif
+"
 
 %configure $common_flags --with-mysql
 make %{?_smp_mflags}
@@ -325,27 +333,27 @@ install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{name}
 
 # fix config file options
 cat misc/conf/zabbix_agentd.conf | sed \
-    -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_agentd.pid|g' \
-    -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
-    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
+    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_agentd.pid|g' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
+    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_agentd.conf
 
 cat misc/conf/zabbix_server.conf | sed \
-    -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix.pid|g' \
-    -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_server.log|g' \
-    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
-    -e 's|AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
-    -e 's|DBUser=root|DBUser=zabbix|g' \
-    -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
+    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix.pid|g' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_server.log|g' \
+    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
+    -e 's|# AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
+    -e 's|^DBUser=root|DBUser=zabbix|g' \
+    -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
     > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_server.conf
 
 cat misc/conf/zabbix_proxy.conf | sed \
-    -e 's|PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_proxy.pid|g' \
-    -e 's|LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_proxy.log|g' \
-    -e 's|#LogFileSize=.*|LogFileSize=0|g' \
-    -e 's|AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
-    -e 's|DBUser=root|DBUser=zabbix|g' \
-    -e 's|DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
+    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_proxy.pid|g' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_proxy.log|g' \
+    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
+    -e 's|# AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/zabbix/|g' \
+    -e 's|^DBUser=root|DBUser=zabbix|g' \
+    -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
     > $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/zabbix_proxy.conf
 
 # install log rotation
@@ -572,6 +580,11 @@ fi
 
 
 %changelog
+* Sat Mar 20 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-7
+- web interface needs php-xml (#572413)
+- updated defaults in config files (#573325)
+- built with libssh2 support (#575279)
+
 * Wed Feb 24 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-6
 - use system fonts
 
