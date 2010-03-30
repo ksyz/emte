@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.8.1
-Release:        7%{?dist}
+Version:        1.8.2
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -20,11 +20,9 @@ Source3:        zabbix-agent.init
 Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 # local rules for config files
-Patch0:         zabbix-1.8.1-config.patch
+Patch0:         zabbix-1.8.2-config.patch
 # close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
 Patch1:         zabbix-1.8.1-cloexec.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=564932
-Patch2:         zabbix-1.8.1-dso.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -246,7 +244,6 @@ Zabbix web frontend for SQLite
 %setup0 -q
 %patch0 -p1
 %patch1 -p1 -b .cloexec
-%patch2 -p1 -b .dso
 
 # remove included fonts
 rm -rf frontends/php/fonts
@@ -580,6 +577,9 @@ fi
 
 
 %changelog
+* Tue Mar 30 2010 Dan Horák <dan[at]danny.cz> - 1.8.2-1
+- Update to 1.8.2
+
 * Sat Mar 20 2010 Dan Horák <dan[at]danny.cz> - 1.8.1-7
 - web interface needs php-xml (#572413)
 - updated defaults in config files (#573325)

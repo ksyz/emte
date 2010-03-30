@@ -1,0 +1,25 @@
+diff -up zabbix-1.8.2/frontends/php/include/config.inc.php.orig zabbix-1.8.2/frontends/php/include/config.inc.php
+--- zabbix-1.8.2/frontends/php/include/config.inc.php.orig	2010-03-29 19:22:45.000000000 +0200
++++ zabbix-1.8.2/frontends/php/include/config.inc.php	2010-03-30 11:11:41.000000000 +0200
+@@ -110,8 +110,7 @@ function __autoload($class_name){
+ 	$ZBX_LOCALNODEID = 0;
+ 	$ZBX_LOCMASTERID = 0;
+ 
+-	$ZBX_CONFIGURATION_FILE = './conf/zabbix.conf.php';
+-	$ZBX_CONFIGURATION_FILE = realpath(dirname($ZBX_CONFIGURATION_FILE)).'/'.basename($ZBX_CONFIGURATION_FILE);
++	$ZBX_CONFIGURATION_FILE = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ 	unset($show_setup);
+ 
+diff -up zabbix-1.8.2/frontends/php/include/defines.inc.php.orig zabbix-1.8.2/frontends/php/include/defines.inc.php
+--- zabbix-1.8.2/frontends/php/include/defines.inc.php.orig	2010-03-29 19:22:45.000000000 +0200
++++ zabbix-1.8.2/frontends/php/include/defines.inc.php	2010-03-30 11:16:18.000000000 +0200
+@@ -47,7 +47,7 @@
+ 
+ 	define('ZBX_POPUP_MAX_ROWS',			20);
+ 
+-	define('ZBX_FONTPATH',					realpath('fonts'));	// where to search for font (GD > 2.0.18)
++	define('ZBX_FONTPATH',					'/usr/share/fonts/dejavu');	// where to search for font (GD > 2.0.18)
+ 	define('ZBX_GRAPH_FONT_NAME',			'DejaVuSans');		// font file name
+ 
+ 	define('ZBX_SCRIPT_TIMEOUT',			360); // in seconds
