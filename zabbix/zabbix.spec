@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -23,6 +23,8 @@ Source5:        zabbix-logrotate.in
 Patch0:         zabbix-1.8.2-config.patch
 # close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
 Patch1:         zabbix-1.8.1-cloexec.patch
+# local rules for config files - fonts
+Patch2:         zabbix-1.8.2-fonts-config.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -186,7 +188,10 @@ Requires:        php-gd
 Requires:        php-bcmath
 Requires:        php-mbstring
 Requires:        php-xml
+# DejaVu fonts doesn't exist on EL <= 5
+%if 0%{?fedora} || 0%{?rhel} >= 6
 Requires:        dejavu-sans-fonts
+%endif
 Requires:        zabbix = %{version}-%{release}
 Requires:        zabbix-web-database = %{version}-%{release}
 
@@ -245,8 +250,13 @@ Zabbix web frontend for SQLite
 %patch0 -p1
 %patch1 -p1 -b .cloexec
 
+# DejaVu fonts doesn't exist on EL <= 5
+%if 0%{?fedora} || 0%{?rhel} >= 6
+%patch2 -p1
+
 # remove included fonts
 rm -rf frontends/php/fonts
+%endif
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -577,6 +587,9 @@ fi
 
 
 %changelog
+* Thu Apr 29 2010 Dan Horák <dan[at]danny.cz> - 1.8.2-2
+- DejaVu fonts doesn't exist on EL <= 5
+
 * Tue Mar 30 2010 Dan Horák <dan[at]danny.cz> - 1.8.2-1
 - Update to 1.8.2
 
