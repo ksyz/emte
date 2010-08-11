@@ -70,7 +70,7 @@ multitude of servers.
 %package docs
 Summary:         Zabbix documentation
 Group:           Documentation
-%if 0%{?fedora} > 9
+%if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
 
@@ -182,7 +182,7 @@ The Zabbix proxy compiled to use SQLite
 %package web
 Summary:         Zabbix Web Frontend
 Group:           Applications/Internet
-%if 0%{?fedora} > 9
+%if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
 Requires:        php
@@ -203,7 +203,7 @@ The php frontend to display the zabbix web interface.
 %package web-mysql
 Summary:         Zabbix web frontend for MySQL
 Group:           Applications/Internet
-%if 0%{?fedora} > 9
+%if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
 Requires:        zabbix-web = %{version}-%{release}
@@ -219,7 +219,7 @@ Zabbix web frontend for MySQL
 %package web-pgsql
 Summary:         Zabbix web frontend for PostgreSQL
 Group:           Applications/Internet
-%if 0%{?fedora} > 9
+%if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
 Requires:        zabbix-web = %{version}-%{release}
@@ -234,7 +234,7 @@ Zabbix web frontend for PostgreSQL
 %package web-sqlite3
 Summary:         Zabbix web frontend for SQLite
 Group:           Applications/Internet
-%if 0%{?fedora} > 9
+%if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
 Requires:        zabbix-web = %{version}-%{release}
