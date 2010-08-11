@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -25,6 +25,8 @@ Patch0:         zabbix-1.8.2-config.patch
 Patch1:         zabbix-1.8.1-cloexec.patch
 # local rules for config files - fonts
 Patch2:         zabbix-1.8.2-fonts-config.patch
+# backported patch for https://support.zabbix.com/browse/ZBX-2326
+Patch3:         zabbix-1.8.2-zbx-2326.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -253,6 +255,8 @@ Zabbix web frontend for SQLite
 # DejaVu fonts doesn't exist on EL <= 5
 %if 0%{?fedora} || 0%{?rhel} >= 6
 %patch2 -p1
+
+%patch3 -p1
 
 # remove included fonts
 rm -rf frontends/php/fonts
@@ -587,6 +591,9 @@ fi
 
 
 %changelog
+* Wed Aug 11 2010 Dan Horák <dan[at]danny.cz> - 1.8.2-3
+- added patch for XSS in triggers page (#620809, ZBX-2326)
+
 * Thu Apr 29 2010 Dan Horák <dan[at]danny.cz> - 1.8.2-2
 - DejaVu fonts doesn't exist on EL <= 5
 
