@@ -1,0 +1,119 @@
+From 0a674ab2e2eab5d0dbe8d08b8b3f2a7b4dbee09d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dan=20Hor=C3=A1k?= <dan@danny.cz>
+Date: Tue, 17 Aug 2010 10:57:36 +0200
+Subject: [PATCH] add CLOEXEC option to sockets and file descriptors
+
+---
+ src/libs/zbxcomms/comms.c |   28 ++++++++++++++++++++++++----
+ src/libs/zbxnix/pid.c     |    6 +++++-
+ 2 files changed, 29 insertions(+), 5 deletions(-)
+
+diff --git a/src/libs/zbxcomms/comms.c b/src/libs/zbxcomms/comms.c
+index 7d4ba9c..adec49c 100644
+--- a/src/libs/zbxcomms/comms.c
++++ b/src/libs/zbxcomms/comms.c
+@@ -62,6 +62,10 @@
+ #	define ZBX_SOCKLEN_T socklen_t
+ #endif
+ 
++#ifndef SOCK_CLOEXEC
++#define SOCK_CLOEXEC 0
++#endif
++
+ /******************************************************************************
+  *                                                                            *
+  * Function: zbx_tcp_strerror                                                 *
+@@ -410,12 +414,16 @@ int	zbx_tcp_connect(zbx_sock_t *s, const char *source_ip, const char *ip, unsign
+ 		goto out;
+ 	}
+ 
+-	if (ZBX_SOCK_ERROR == (s->socket = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)))
++	if (ZBX_SOCK_ERROR == (s->socket = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol)))
+ 	{
+ 		zbx_set_tcp_strerror("Cannot create socket [%s]:%d [%s]", ip, port, strerror_from_system(zbx_sock_last_error()));
+ 		goto out;
+ 	}
+ 
++#if ! SOCK_CLOEXEC
++	fcntl(s->socket, F_SETFD, FD_CLOEXEC);
++#endif
++
+ 	if (NULL != source_ip)
+ 	{
+ 		memset(&hints, 0x00, sizeof(struct addrinfo));
+@@ -475,12 +483,16 @@ int	zbx_tcp_connect(zbx_sock_t *s, const char *source_ip, const char *ip, unsign
+ 	servaddr_in.sin_addr.s_addr	= ((struct in_addr *)(hp->h_addr))->s_addr;
+ 	servaddr_in.sin_port		= htons(port);
+ 
+-	if (ZBX_SOCK_ERROR == (s->socket = socket(AF_INET, SOCK_STREAM, 0)))
++	if (ZBX_SOCK_ERROR == (s->socket = socket(AF_INET,SOCK_STREAM | SOCK_CLOEXEC,0)))
+ 	{
+ 		zbx_set_tcp_strerror("Cannot create socket [%s:%d] [%s]", ip, port, strerror_from_system(zbx_sock_last_error()));
+ 		return FAIL;
+ 	}
+ 
++#if ! SOCK_CLOEXEC
++	fcntl(s->socket, F_SETFD, FD_CLOEXEC);
++#endif
++
+ 	if (NULL != source_ip)
+ 	{
+ 		source_addr.sin_family		= AF_INET;
+@@ -720,13 +732,17 @@ int	zbx_tcp_listen(zbx_sock_t *s, const char *listen_ip, unsigned short listen_p
+ 				continue;
+ 
+ 			if (ZBX_SOCK_ERROR == (s->sockets[s->num_socks] =
+-					socket(current_ai->ai_family, current_ai->ai_socktype, current_ai->ai_protocol)))
++					socket(current_ai->ai_family, current_ai->ai_socktype | SOCK_CLOEXEC, current_ai->ai_protocol)))
+ 			{
+ 				zbx_set_tcp_strerror("socket() for [[%s]:%s] failed with error %d: %s",
+ 						ip, port, zbx_sock_last_error(), strerror_from_system(zbx_sock_last_error()));
+ 				goto out;
+ 			}
+ 
++#if ! SOCK_CLOEXEC
++			fcntl(s->sockets[s->num_socks], F_SETFD, FD_CLOEXEC);
++#endif
++
+ 			/* Enable address reuse */
+ 			/* This is to immediately use the address even if it is in TIME_WAIT state */
+ 			/* http://www-128.ibm.com/developerworks/linux/library/l-sockpit/index.html */
+@@ -828,13 +844,17 @@ int	zbx_tcp_listen(zbx_sock_t *s, const char *listen_ip, unsigned short listen_p
+ 			goto out;
+ 		}
+ 
+-		if (ZBX_SOCK_ERROR == (s->sockets[s->num_socks] = socket(AF_INET, SOCK_STREAM, 0)))
++		if (ZBX_SOCK_ERROR == (s->sockets[s->num_socks] = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0)))
+ 		{
+ 			zbx_set_tcp_strerror("socket() for [[%s]:%hu] failed with error %d: %s",
+ 					ip, listen_port, zbx_sock_last_error(), strerror_from_system(zbx_sock_last_error()));
+ 			goto out;
+ 		}
+ 
++#if ! SOCK_CLOEXEC
++		fcntl(s->sockets[s->num_socks], F_SETFD, FD_CLOEXEC);
++#endif
++
+ 		/* Enable address reuse */
+ 		/* This is to immediately use the address even if it is in TIME_WAIT state */
+ 		/* http://www-128.ibm.com/developerworks/linux/library/l-sockpit/index.html */
+diff --git a/src/libs/zbxnix/pid.c b/src/libs/zbxnix/pid.c
+index 561af79..f55f3a3 100644
+--- a/src/libs/zbxnix/pid.c
++++ b/src/libs/zbxnix/pid.c
+@@ -83,7 +83,11 @@ int	create_pid_file(const char *pidfile)
+ 	/* lock file */
+ 	fdpid = fileno(fpid);
+ #ifdef HAVE_FCNTL_H
+-	if(-1 != fdpid) fcntl(fdpid, F_SETLK, &fl);
++	if(-1 != fdpid)
++	{
++		fcntl(fdpid, F_SETLK, &fl);
++		fcntl(fdpid, F_SETFD, FD_CLOEXEC);
++	}
+ #else
+ 	if(-1 != fdpid) flock(fdpid, LOCK_EX);
+ #endif /* HAVE_FCNTL_H */
+-- 
+1.7.2.1
+

@@ -1,0 +1,13 @@
+diff -up zabbix-1.8.3/frontends/php/include/config.inc.php.orig zabbix-1.8.3/frontends/php/include/config.inc.php
+--- zabbix-1.8.3/frontends/php/include/config.inc.php.orig	2010-08-16 10:19:33.000000000 +0200
++++ zabbix-1.8.3/frontends/php/include/config.inc.php	2010-08-17 09:02:34.000000000 +0200
+@@ -113,8 +113,7 @@ function __autoload($class_name){
+ 	$ZBX_LOCALNODEID = 0;
+ 	$ZBX_LOCMASTERID = 0;
+ 
+-	$ZBX_CONFIGURATION_FILE = './conf/zabbix.conf.php';
+-	$ZBX_CONFIGURATION_FILE = realpath(dirname($ZBX_CONFIGURATION_FILE)).'/'.basename($ZBX_CONFIGURATION_FILE);
++	$ZBX_CONFIGURATION_FILE = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ // Include Tactical Overview modules
+ 	require_once('include/locales.inc.php');

@@ -1,0 +1,12 @@
+diff -up zabbix-1.8.3/frontends/php/include/defines.inc.php.orig zabbix-1.8.3/frontends/php/include/defines.inc.php
+--- zabbix-1.8.3/frontends/php/include/defines.inc.php.orig	2010-08-16 10:19:33.000000000 +0200
++++ zabbix-1.8.3/frontends/php/include/defines.inc.php	2010-08-17 11:18:30.000000000 +0200
+@@ -35,7 +35,7 @@
+ 
+ 	define('ZBX_WIDGET_ROWS',				20);
+ 
+-	define('ZBX_FONTPATH',					realpath('fonts'));	// where to search for font (GD > 2.0.18)
++	define('ZBX_FONTPATH',					'/usr/share/font/dejavu');	// where to search for font (GD > 2.0.18)
+ 	define('ZBX_GRAPH_FONT_NAME',			'DejaVuSans');		// font file name
+ 
+ 	define('ZBX_SCRIPT_TIMEOUT',			360); // in seconds
