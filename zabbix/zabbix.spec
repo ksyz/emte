@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -587,6 +587,9 @@ fi
 
 
 %changelog
+* Mon Sep  6 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-2
+- fix font path in patch2 (#630500)
+
 * Tue Aug 17 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-1
 - updated to 1.8.3
 
