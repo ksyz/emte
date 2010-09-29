@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -587,6 +587,9 @@ fi
 
 
 %changelog
+* Wed Sep 29 2010 jkeating - 1.8.3-3
+- Rebuilt for gcc bug 634757
+
 * Mon Sep  6 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-2
 - fix font path in patch2 (#630500)
 
