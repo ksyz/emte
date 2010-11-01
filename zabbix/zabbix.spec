@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.3
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -587,6 +587,9 @@ fi
 
 
 %changelog
+* Mon Nov  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-4
+- rebuilt with net-snmp 5.6
+
 * Wed Sep 29 2010 jkeating - 1.8.3-3
 - Rebuilt for gcc bug 634757
 
