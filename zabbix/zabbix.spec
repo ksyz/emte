@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.3
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -25,6 +25,8 @@ Patch0:         zabbix-1.8.3-config.patch
 Patch1:         zabbix-1.8.3-cloexec.patch
 # local rules for config files - fonts
 Patch2:         zabbix-1.8.3-fonts-config.patch
+# https://bugzilla.redhat.com/show_bug.cgi?id=656072
+Patch3:         zabbix-1.8.3-email-fix.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -257,6 +259,8 @@ Zabbix web frontend for SQLite
 # remove included fonts
 rm -rf frontends/php/fonts
 %endif
+
+%patch3 -p1 -b .email-fix
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -587,6 +591,9 @@ fi
 
 
 %changelog
+* Tue Nov 23 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-5
+- zabbix emailer doesn't handle multiline responses (#656072)
+
 * Mon Nov  1 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-4
 - rebuilt with net-snmp 5.6
 
