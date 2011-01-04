@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.8.3
-Release:        5%{?dist}
+Version:        1.8.4
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -20,13 +20,9 @@ Source3:        zabbix-agent.init
 Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
 # local rules for config files
-Patch0:         zabbix-1.8.3-config.patch
-# close fd on exec - https://bugzilla.redhat.com/show_bug.cgi?id=559221
-Patch1:         zabbix-1.8.3-cloexec.patch
+Patch0:         zabbix-1.8.4-config.patch
 # local rules for config files - fonts
-Patch2:         zabbix-1.8.3-fonts-config.patch
-# https://bugzilla.redhat.com/show_bug.cgi?id=656072
-Patch3:         zabbix-1.8.3-email-fix.patch
+Patch1:         zabbix-1.8.4-fonts-config.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -250,17 +246,14 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q
 %patch0 -p1
-%patch1 -p1 -b .cloexec
 
 # DejaVu fonts doesn't exist on EL <= 5
 %if 0%{?fedora} || 0%{?rhel} >= 6
-%patch2 -p1
+%patch1 -p1
 
 # remove included fonts
 rm -rf frontends/php/fonts
 %endif
-
-%patch3 -p1 -b .email-fix
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
@@ -591,6 +584,10 @@ fi
 
 
 %changelog
+* Tue Jan  4 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-1
+- updated to 1.8.4
+- fixes zabbix_agent fail to start on IPv4-only host (#664639)
+
 * Tue Nov 23 2010 Dan Horák <dan[at]danny.cz> - 1.8.3-5
 - zabbix emailer doesn't handle multiline responses (#656072)
 
