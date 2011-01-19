@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -284,6 +284,7 @@ common_flags="
     --with-net-snmp
     --with-ldap
 %if 0%{!?el4:1}
+    --with-libcurl
     --with-openipmi
 %endif
     --with-jabber
@@ -584,6 +585,9 @@ fi
 
 
 %changelog
+* Tue Jan 18 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-2
+- enable libcurl detection (#670500)
+
 * Tue Jan  4 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-1
 - updated to 1.8.4
 - fixes zabbix_agent fail to start on IPv4-only host (#664639)
