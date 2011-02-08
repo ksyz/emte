@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -585,6 +585,9 @@ fi
 
 
 %changelog
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.4-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
 * Tue Jan 18 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-2
 - enable libcurl detection (#670500)
 
