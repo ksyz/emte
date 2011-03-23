@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.4
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -585,6 +585,9 @@ fi
 
 
 %changelog
+* Wed Mar 23 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-4
+- rebuilt for mysql 5.5.10 (soname bump in libmysqlclient)
+
 * Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.4-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
 
