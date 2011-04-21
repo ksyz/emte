@@ -6,8 +6,8 @@
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
 
 Name:           zabbix
-Version:        1.8.4
-Release:        4%{?dist}
+Version:        1.8.5
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -585,6 +585,9 @@ fi
 
 
 %changelog
+* Wed Apr 20 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-1
+- updated to 1.8.5
+
 * Wed Mar 23 2011 Dan Horák <dan[at]danny.cz> - 1.8.4-4
 - rebuilt for mysql 5.5.10 (soname bump in libmysqlclient)
 
