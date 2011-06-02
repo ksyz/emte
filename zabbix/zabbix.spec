@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -19,6 +19,10 @@ Source2:        zabbix-server.init
 Source3:        zabbix-agent.init
 Source4:        zabbix-proxy.init
 Source5:        zabbix-logrotate.in
+# processing of SNMP traps
+Source6:        zabbix_snmptrap
+Source7:        zabbix_snmptrap.conf
+Source8:        zabbix_snmptrap.README
 # local rules for config files
 Patch0:         zabbix-1.8.4-config.patch
 # local rules for config files - fonts
@@ -272,6 +276,8 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include \
     frontends/php/include/classes
 
+cp -p %{SOURCE8} .
+
 
 %build
 
@@ -318,11 +324,13 @@ rm -rf $RPM_BUILD_ROOT
 
 # set up some required directories
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/externalscripts
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/web
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/init.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_datadir}
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/%{name}
 
@@ -408,6 +416,10 @@ for pkg in proxy server ; do
 done
 # remove extraneous ones
 rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/create
+
+# processing of SNMP traps
+install -m 755 -p %{SOURCE6} $RPM_BUILD_ROOT%{_bindir}
+install -m 644 -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/zabbix
 
 
 %clean
@@ -512,9 +524,11 @@ fi
 %files server
 %defattr(-,root,root,-)
 %attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_server.conf
+%attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/zabbix/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %{_sysconfdir}/init.d/zabbix-server
 %{_mandir}/man8/zabbix_server.8*
+%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/lib/zabbix
 
 %files server-mysql
 %defattr(-,root,root,-)
@@ -533,14 +547,17 @@ fi
 
 %files agent
 %defattr(-,root,root,-)
+%doc zabbix_snmptrap.README
 %config(noreplace) %{_sysconfdir}/zabbix/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/zabbix/zabbix_agentd.conf
+%config(noreplace) %{_sysconfdir}/zabbix/zabbix_snmptrap.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
 %{_sysconfdir}/init.d/zabbix-agent
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
 %{_bindir}/zabbix_sender
 %{_bindir}/zabbix_get
+%{_bindir}/zabbix_snmptrap
 %{_mandir}/man1/zabbix_sender.1*
 %{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_agentd.8*
@@ -548,6 +565,7 @@ fi
 %files proxy
 %defattr(-,root,root,-)
 %attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix/zabbix_proxy.conf
+%attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/zabbix/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %{_sysconfdir}/init.d/zabbix-proxy
 %{_mandir}/man8/zabbix_proxy.8*
@@ -585,6 +603,10 @@ fi
 
 
 %changelog
+* Mon May 23 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-2
+- include /var/lib/zabbix and /etc/zabbix/externalscripts dirs in package (#704181)
+- add snmp trap receiver script in package (#705331)
+
 * Wed Apr 20 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-1
 - updated to 1.8.5
 
