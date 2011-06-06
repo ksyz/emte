@@ -7,7 +7,7 @@
 
 Name:           zabbix
 Version:        1.8.5
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -23,6 +23,8 @@ Source5:        zabbix-logrotate.in
 Source6:        zabbix_snmptrap
 Source7:        zabbix_snmptrap.conf
 Source8:        zabbix_snmptrap.README
+# tmpfiles for F >= 15
+Source9:        zabbix-tmpfiles.conf
 # local rules for config files
 Patch0:         zabbix-1.8.4-config.patch
 # local rules for config files - fonts
@@ -278,6 +280,9 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
 
 cp -p %{SOURCE8} .
 
+# fix path to traceroute utility
+sed -i.orig -e 's|/usr/bin/traceroute|/bin/traceroute|' create/data/data.sql
+
 
 %build
 
@@ -421,6 +426,12 @@ rm -rf $RPM_BUILD_ROOT%{_datadir}/%{name}/create
 install -m 755 -p %{SOURCE6} $RPM_BUILD_ROOT%{_bindir}
 install -m 644 -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/zabbix
 
+%if 0%{?fedora} >= 15
+# systemd must create /var/run/zabbix
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d
+install -m 0644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbix.conf
+%endif
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -514,6 +525,9 @@ fi
 %defattr(-,root,root,-)
 %doc AUTHORS ChangeLog COPYING CREDITS NEWS README
 %dir %{_sysconfdir}/zabbix
+%if 0%{?fedora} >= 15
+%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
+%endif
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/zabbix
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/zabbix
 
@@ -603,6 +617,10 @@ fi
 
 
 %changelog
+* Fri Jun  3 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-3
+- fix path to the traceroute utility
+- add tmpfiles.d support for /var/run/zabbix (#656726)
+
 * Mon May 23 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-2
 - include /var/lib/zabbix and /etc/zabbix/externalscripts dirs in package (#704181)
 - add snmp trap receiver script in package (#705331)
