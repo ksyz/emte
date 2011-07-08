@@ -9,7 +9,7 @@
 
 Name:           zabbix
 Version:        1.8.5
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -622,6 +622,9 @@ fi
 
 
 %changelog
+* Fri Jul  8 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-5
+- rebuilt with net-snmp 5.7
+
 * Mon Jun 13 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-4
 - generalize the spec so creating packages like zabbix18 will be much easier
 
