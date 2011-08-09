@@ -8,14 +8,14 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.5
-Release:        5%{?dist}
+Version:        1.8.6
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com/
-Source0:        http://downloads.sourceforge.net/%{name}/%{srcname}-%{version}.tar.gz
+Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
 Source1:        zabbix-web.conf
 Source2:        zabbix-server.init
 Source3:        zabbix-agent.init
@@ -205,7 +205,7 @@ Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-web-database = %{version}-%{release}
 
 %description web
-The php frontend to display the zabbix web interface.
+The php frontend to display the Zabbix web interface.
 
 %package web-mysql
 Summary:         Zabbix web frontend for MySQL
@@ -213,7 +213,7 @@ Group:           Applications/Internet
 %if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
-Requires:        zabbix-web = %{version}-%{release}
+Requires:        %{name}-web = %{version}-%{release}
 Requires:        php-mysql
 Provides:        %{name}-web-database = %{version}-%{release}
 Conflicts:       %{name}-web-pgsql
@@ -229,7 +229,7 @@ Group:           Applications/Internet
 %if 0%{?fedora} > 9 || 0%{?rhel} >= 6
 BuildArch:       noarch
 %endif
-Requires:        zabbix-web = %{version}-%{release}
+Requires:        %{name}-web = %{version}-%{release}
 Requires:        php-pgsql
 Provides:        %{name}-web-database = %{version}-%{release}
 Conflicts:       %{name}-web-mysql
@@ -443,9 +443,11 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %pre
+getent group zabbix > /dev/null || groupadd -r zabbix
 getent passwd zabbix > /dev/null || \
-    /usr/sbin/useradd -c "Zabbix Monitoring System" \
-    -s /sbin/nologin -r -d %{_localstatedir}/lib/%{srcname} zabbix || :
+    useradd -r -g zabbix -d %{_localstatedir}/lib/%{srcname} -s /sbin/nologin \
+    -c "Zabbix Monitoring System" zabbix
+:
 
 %post server
 /sbin/chkconfig --add zabbix-server
@@ -622,6 +624,10 @@ fi
 
 
 %changelog
+* Tue Aug  9 2011 Dan Horák <dan[at]danny.cz> - 1.8.6-1
+- updated to 1.8.6 (#729164, #729165)
+- updated user/group adding scriptlet
+
 * Fri Jul  8 2011 Dan Horák <dan[at]danny.cz> - 1.8.5-5
 - rebuilt with net-snmp 5.7
 
