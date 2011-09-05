@@ -8,7 +8,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.6
+Version:        1.8.7
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -624,6 +624,9 @@ fi
 
 
 %changelog
+* Mon Sep  5 2011 Dan Horák <dan[at]danny.cz> - 1.8.7-1
+- updated to 1.8.7
+
 * Tue Aug  9 2011 Dan Horák <dan[at]danny.cz> - 1.8.6-1
 - updated to 1.8.6 (#729164, #729165)
 - updated user/group adding scriptlet
