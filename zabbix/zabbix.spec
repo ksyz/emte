@@ -535,6 +535,7 @@ fi
 %if 0%{?fedora} >= 15
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
 %endif
+%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/lib/%{srcname}
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/%{srcname}
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/%{srcname}
 
@@ -549,7 +550,6 @@ fi
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %{_sysconfdir}/init.d/zabbix-server
 %{_mandir}/man8/zabbix_server.8*
-%attr(0755,zabbix,zabbix) %dir %{_localstatedir}/lib/%{srcname}
 
 %files server-mysql
 %defattr(-,root,root,-)
