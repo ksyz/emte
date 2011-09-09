@@ -9,7 +9,7 @@
 
 Name:           zabbix
 Version:        1.8.7
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -31,6 +31,8 @@ Source9:        zabbix-tmpfiles.conf
 Patch0:         zabbix-1.8.4-config.patch
 # local rules for config files - fonts
 Patch1:         zabbix-1.8.4-fonts-config.patch
+# https://support.zabbix.com/browse/ZBX-4099
+Patch2:         zabbix-1.8.7-zbx4099.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -257,6 +259,7 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q -n %{srcname}-%{version}
 %patch0 -p1
+%patch2 -p0
 
 # DejaVu fonts doesn't exist on EL <= 5
 %if 0%{?fedora} || 0%{?rhel} >= 6
@@ -624,6 +627,9 @@ fi
 
 
 %changelog
+* Fri Sep  9 2011 Dan Horák <dan[at]danny.cz> - 1.8.7-2
+- fix server crash (ZBX-4099)
+
 * Mon Sep  5 2011 Dan Horák <dan[at]danny.cz> - 1.8.7-1
 - updated to 1.8.7
 

@@ -1,0 +1,37 @@
+Index: src/libs/zbxdbhigh/db.c
+===================================================================
+--- src/libs/zbxdbhigh/db.c	(revision 21469)
++++ src/libs/zbxdbhigh/db.c	(revision 21470)
+@@ -2062,7 +2062,7 @@
+ 
+ 	h_value = zbx_malloc(h_value, (h_alloc + 1) * sizeof(char *));
+ 
+-	while (NULL != (row = DBfetch(result)))
++	while (NULL != (row = DBfetch(result)) && SUCCEED != DBis_null(row[0]))
+ 	{
+ 		if (h_alloc == h_num)
+ 		{
+Index: src/libs/zbxdb/db.c
+===================================================================
+--- src/libs/zbxdb/db.c	(revision 21469)
++++ src/libs/zbxdb/db.c	(revision 21470)
+@@ -1275,13 +1275,13 @@
+ 
+ int	zbx_db_is_null(const char *field)
+ {
+-	int	ret = FAIL;
+-
+-	if (NULL == field)		ret = SUCCEED;
+-#if defined(HAVE_ORACLE)
+-	else if ('\0' == field[0])	ret = SUCCEED;
++	if (NULL == field)
++		return SUCCEED;
++#ifdef HAVE_ORACLE
++	if ('\0' == *field)
++		return SUCCEED;
+ #endif
+-	return ret;
++	return FAIL;
+ }
+ 
+ #if defined(HAVE_IBM_DB2)
