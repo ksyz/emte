@@ -8,8 +8,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.7
-Release:        2%{?dist}
+Version:        1.8.8
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -31,8 +31,8 @@ Source9:        zabbix-tmpfiles.conf
 Patch0:         zabbix-1.8.4-config.patch
 # local rules for config files - fonts
 Patch1:         zabbix-1.8.4-fonts-config.patch
-# https://support.zabbix.com/browse/ZBX-4099
-Patch2:         zabbix-1.8.7-zbx4099.patch
+# remove flash content (#737337)
+Patch2:         zabbix-1.8.8-no-flash.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -259,7 +259,6 @@ Zabbix web frontend for SQLite
 %prep
 %setup0 -q -n %{srcname}-%{version}
 %patch0 -p1
-%patch2 -p0
 
 # DejaVu fonts doesn't exist on EL <= 5
 %if 0%{?fedora} || 0%{?rhel} >= 6
@@ -279,6 +278,8 @@ sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
 # kill off .htaccess files, options set in SOURCE1
 rm -f frontends/php/include/.htaccess
 rm -f frontends/php/include/classes/.htaccess
+rm -f frontends/php/api/.htaccess
+rm -f frontends/php/conf/.htaccess
 
 # set timestamp on modified config file and directories
 touch -r frontends/php/css.css frontends/php/include/config.inc.php \
@@ -290,6 +291,16 @@ cp -p %{SOURCE8} .
 
 # fix path to traceroute utility
 sed -i.orig -e 's|/usr/bin/traceroute|/bin/traceroute|' create/data/data.sql
+
+# FSF address is wrong
+# https://support.zabbix.com/browse/ZBX-4108
+
+# remove prebuild Windows binaries
+rm -rf bin
+
+# remove flash applet
+rm -f frontend/php/images/flash/zbxclock.swf
+%patch2 -p1
 
 
 %build
@@ -552,6 +563,8 @@ fi
 %attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %{_sysconfdir}/init.d/zabbix-server
+%{_bindir}/zabbix_get
+%{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_server.8*
 
 %files server-mysql
@@ -580,10 +593,8 @@ fi
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
 %{_bindir}/zabbix_sender
-%{_bindir}/zabbix_get
 %{_bindir}/zabbix_snmptrap
 %{_mandir}/man1/zabbix_sender.1*
-%{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_agentd.8*
 
 %files proxy
@@ -592,6 +603,8 @@ fi
 %attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %{_sysconfdir}/init.d/zabbix-proxy
+%{_bindir}/zabbix_get
+%{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_proxy.8*
 
 %files proxy-mysql
@@ -627,6 +640,16 @@ fi
 
 
 %changelog
+* Wed Oct  5 2011 Dan Horák <dan[at]danny.cz> - 1.8.8-1
+- Update for 1.8.8
+- Drop the ZBX-4099 patch, that's now obsolete
+- Remove two further htaccess files and put the configuration in
+  the main configuration file
+- thanks to Volker Fröhlich for the changes above
+- move zabbix_get to the server and proxy subpackages (#734512)
+- remove prebuilt Windows binaries (#737341)
+- remove flash clock applet (#737337)
+
 * Fri Sep  9 2011 Dan Horák <dan[at]danny.cz> - 1.8.7-2
 - fix server crash (ZBX-4099)
 
