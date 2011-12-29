@@ -8,7 +8,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.9
+Version:        1.8.10
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -686,6 +686,9 @@ fi
 
 
 %changelog
+* Wed Dec 28 2011 Dan Horák <dan[at]danny.cz> - 1.8.10-1
+- update to 1.8.10 (fixes CVE-2011-4615)
+
 * Thu Nov 24 2011 Dan Horák <dan[at]danny.cz> - 1.8.9-1
 - update to 1.8.9
 - switch to systemd units (#720065)
