@@ -9,7 +9,7 @@
 
 Name:           zabbix
 Version:        1.8.10
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -686,6 +686,9 @@ fi
 
 
 %changelog
+* Sat Jan 14 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.8.10-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
 * Wed Dec 28 2011 Dan Horák <dan[at]danny.cz> - 1.8.10-1
 - update to 1.8.10 (fixes CVE-2011-4615)
 
