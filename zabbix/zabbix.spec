@@ -87,6 +87,7 @@ Group:           Applications/Internet
 Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-server-implementation = %{version}-%{release}
 Requires:        fping
+Requires:        traceroute
 Requires:        net-snmp
 Requires(post):  /sbin/chkconfig
 Requires(preun): /sbin/chkconfig
