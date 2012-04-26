@@ -8,7 +8,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.11
+Version:        1.8.12
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -39,6 +39,8 @@ Patch0:         zabbix-1.8.4-config.patch
 Patch1:         zabbix-1.8.4-fonts-config.patch
 # remove flash content (#737337)
 Patch2:         zabbix-1.8.8-no-flash.patch
+# adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
+Patch3:         zabbix-1.8.12-fping3.patch
 
 Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -262,6 +264,7 @@ Zabbix web frontend for SQLite
 %setup0 -q -n %{srcname}-%{version}
 %patch0 -p1
 %patch1 -p1
+%patch3 -p1
 
 # remove included fonts
 rm -rf frontends/php/fonts
@@ -687,6 +690,9 @@ fi
 
 
 %changelog
+* Tue Apr 24 2012 Dan Horák <dan[at]danny.cz> - 1.8.12-1
+- update to 1.8.12
+
 * Wed Mar 21 2012 Dan Horák <dan[at]danny.cz> - 1.8.11-1
 - update to 1.8.11
 
