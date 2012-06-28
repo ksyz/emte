@@ -8,7 +8,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.13
+Version:        1.8.14
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -690,6 +690,9 @@ fi
 
 
 %changelog
+* Thu Jun 28 2012 Dan Horák <dan[at]danny.cz> - 1.8.14-1
+- update to 1.8.14
+
 * Sat May 12 2012 Dan Horák <dan[at]danny.cz> - 1.8.13-1
 - update to 1.8.13
 
