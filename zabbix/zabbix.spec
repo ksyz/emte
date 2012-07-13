@@ -8,20 +8,18 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        1.8.14
+Version:        2.0.1
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com/
-Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
+#Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
+# upstream tarbal minus src/zabbix_java/lib/org-json-2010-12-28.jar
+Source0:        %{srcname}-%{version}-free.tar.gz
 Source1:        zabbix-web.conf
 Source5:        zabbix-logrotate.in
-# processing of SNMP traps
-Source6:        zabbix_snmptrap
-Source7:        zabbix_snmptrap.conf
-Source8:        zabbix_snmptrap.README
 # tmpfiles for F >= 15
 Source9:        zabbix-tmpfiles.conf
 # systemd units
@@ -34,15 +32,13 @@ Source15:       zabbix-server-pgsql.service
 Source16:       zabbix-server-sqlite3.service
 
 # local rules for config files
-Patch0:         zabbix-1.8.4-config.patch
+Patch0:         zabbix-2.0.1-config.patch
 # local rules for config files - fonts
-Patch1:         zabbix-1.8.4-fonts-config.patch
+Patch1:         zabbix-2.0.1-fonts-config.patch
 # remove flash content (#737337)
-Patch2:         zabbix-1.8.8-no-flash.patch
+Patch2:         zabbix-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         zabbix-1.8.12-fping3.patch
-
-Buildroot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -260,6 +256,7 @@ Conflicts:       %{name}-web-pgsql
 %description web-sqlite3
 Zabbix web frontend for SQLite
 
+
 %prep
 %setup0 -q -n %{srcname}-%{version}
 %patch0 -p1
@@ -288,10 +285,11 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include \
     frontends/php/include/classes
 
-cp -p %{SOURCE8} .
-
 # fix path to traceroute utility
-sed -i.orig -e 's|/usr/bin/traceroute|/bin/traceroute|' create/data/data.sql
+for f in database/*/data.sql
+do
+    sed -i.orig -e 's|/usr/bin/traceroute|/bin/traceroute|' $f
+done
 
 # FSF address is wrong
 # https://support.zabbix.com/browse/ZBX-4108
@@ -312,6 +310,7 @@ common_flags="
     --enable-agent
     --enable-proxy
     --enable-ipv6
+    --disable-java
     --with-net-snmp
     --with-ldap
     --with-libcurl
@@ -326,7 +325,7 @@ make %{?_smp_mflags}
 mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_mysql
 mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_mysql
 
-%configure $common_flags --with-pgsql
+%configure $common_flags --with-postgresql
 make %{?_smp_mflags}
 mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_pgsql
 mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_pgsql
@@ -341,8 +340,6 @@ touch src/zabbix_proxy/zabbix_proxy
 
 
 %install
-rm -rf $RPM_BUILD_ROOT
-
 # set up some required directories
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/externalscripts
@@ -362,33 +359,32 @@ cp -a frontends/php $RPM_BUILD_ROOT%{_datadir}/%{srcname}
 touch $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/zabbix.conf.php
 
 # drop config files in place
-install -m 0644 -p misc/conf/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}
 install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{srcname}.conf
 
 # fix config file options
-cat misc/conf/zabbix_agentd.conf | sed \
+sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_agentd.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_agentd.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
-    > $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_agentd.conf
+    conf/zabbix_agentd.conf
 
-cat misc/conf/zabbix_server.conf | sed \
+sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_server.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|# AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/%{srcname}/|g' \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
-    > $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_server.conf
+    conf/zabbix_server.conf
 
-cat misc/conf/zabbix_proxy.conf | sed \
+sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_proxy.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_proxy.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|# AlertScriptsPath=/home/zabbix/bin/|AlertScriptsPath=%{_localstatedir}/lib/%{srcname}/|g' \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_localstatedir}/lib/mysql/mysql.sock|g' \
-    > $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_proxy.conf
+    conf/zabbix_proxy.conf
 
 # install log rotation
 cat %{SOURCE5} | sed -e 's|COMPONENT|server|g' > \
@@ -416,6 +412,12 @@ install -m 0755 -p src/zabbix_server/zabbix_server_* $RPM_BUILD_ROOT%{_sbindir}/
 rm $RPM_BUILD_ROOT%{_sbindir}/zabbix_proxy
 install -m 0755 -p src/zabbix_proxy/zabbix_proxy_* $RPM_BUILD_ROOT%{_sbindir}/
 
+# install compatibility links for config files
+ln -sf %{_sysconfdir}/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_agent.conf
+ln -sf %{_sysconfdir}/zabbix_agentd.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_agentd.conf
+ln -sf %{_sysconfdir}/zabbix_server.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_server.conf
+ln -sf %{_sysconfdir}/zabbix_proxy.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_proxy.conf
+
 # nuke static libs and empty oracle upgrade sql
 rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a
 
@@ -423,38 +425,32 @@ rm -rf $RPM_BUILD_ROOT%{_libdir}/libzbx*.a
 for pkg in proxy server ; do
     docdir=$RPM_BUILD_ROOT%{_docdir}/%{srcname}-$pkg-mysql-%{version}
     install -dm 755 $docdir
-    cp -p --parents create/schema/mysql.sql $docdir
-    cp -p --parents create/data/data.sql $docdir
-    cp -p --parents create/data/images_mysql.sql $docdir
+    cp -p --parents database/mysql/schema.sql $docdir
+    cp -p --parents database/mysql/data.sql $docdir
+    cp -p --parents database/mysql/images.sql $docdir
     cp -pR --parents upgrades/dbpatches/1.6/mysql $docdir
     cp -pR --parents upgrades/dbpatches/1.8/mysql $docdir
+    cp -pR --parents upgrades/dbpatches/2.0/mysql $docdir
     docdir=$RPM_BUILD_ROOT%{_docdir}/%{srcname}-$pkg-pgsql-%{version}
     install -dm 755 $docdir
-    cp -p --parents create/schema/postgresql.sql $docdir
-    cp -p --parents create/data/data.sql $docdir
-    cp -p --parents create/data/images_pgsql.sql $docdir
+    cp -p --parents database/postgresql/schema.sql $docdir
+    cp -p --parents database/postgresql/data.sql $docdir
+    cp -p --parents database/postgresql/images.sql $docdir
     cp -pR --parents upgrades/dbpatches/1.6/postgresql $docdir
     cp -pR --parents upgrades/dbpatches/1.8/postgresql $docdir
+    cp -pR --parents upgrades/dbpatches/2.0/postgresql $docdir
     docdir=$RPM_BUILD_ROOT%{_docdir}/%{srcname}-$pkg-sqlite3-%{version}
     install -dm 755 $docdir
-    cp -p --parents create/schema/sqlite.sql $docdir
-    cp -p --parents create/data/data.sql $docdir
-    cp -p --parents create/data/images_sqlite3.sql $docdir
+    cp -p --parents database/sqlite3/schema.sql $docdir
+    cp -p --parents database/sqlite3/data.sql $docdir
+    cp -p --parents database/sqlite3/images.sql $docdir
 done
 # remove extraneous ones
 rm -rf $RPM_BUILD_ROOT%{_datadir}/%{srcname}/create
 
-# processing of SNMP traps
-install -m 755 -p %{SOURCE6} $RPM_BUILD_ROOT%{_bindir}
-install -m 644 -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}
-
 # systemd must create /var/run/%{srcname}
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d
 install -m 0644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbix.conf
-
-
-%clean
-rm -rf $RPM_BUILD_ROOT
 
 
 %pre
@@ -593,60 +589,56 @@ fi
 
 
 %files
-%defattr(-,root,root,-)
-%doc AUTHORS ChangeLog COPYING CREDITS NEWS README
+%doc AUTHORS ChangeLog COPYING NEWS README
 %dir %{_sysconfdir}/%{srcname}
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/lib/%{srcname}
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/log/%{srcname}
 %attr(0755,zabbix,zabbix) %dir %{_localstatedir}/run/%{srcname}
+%{_bindir}/zabbix_get
+%{_bindir}/zabbix_sender
+%{_mandir}/man1/zabbix_get.1*
+%{_mandir}/man1/zabbix_sender.1*
 
 %files server
-%defattr(-,root,root,-)
-%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_server.conf
+%doc misc/snmptrap/zabbix_trap_receiver.pl
+%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
+%{_sysconfdir}/%{srcname}/zabbix_server.conf
 %attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %ghost %{_unitdir}/zabbix-server.service
-%{_bindir}/zabbix_get
-%{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_server.8*
 
 %files server-mysql
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-server-mysql-%{version}/
 %{_sbindir}/zabbix_server_mysql
 %{_unitdir}/zabbix-server-mysql.service
 
 %files server-pgsql
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-server-pgsql-%{version}/
 %{_sbindir}/zabbix_server_pgsql
 %{_unitdir}/zabbix-server-pgsql.service
 
 %files server-sqlite3
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-server-sqlite3-%{version}/
 %{_sbindir}/zabbix_server_sqlite3
 %{_unitdir}/zabbix-server-sqlite3.service
 
 %files agent
-%defattr(-,root,root,-)
-%doc zabbix_snmptrap.README
-%config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agent.conf
-%config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
-%config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_snmptrap.conf
+%config(noreplace) %{_sysconfdir}/zabbix_agent.conf
+%{_sysconfdir}/%{srcname}/zabbix_agent.conf
+%config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
+%{_sysconfdir}/%{srcname}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
 %{_unitdir}/zabbix-agent.service
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
-%{_bindir}/zabbix_sender
-%{_bindir}/zabbix_snmptrap
-%{_mandir}/man1/zabbix_sender.1*
 %{_mandir}/man8/zabbix_agentd.8*
 
 %files proxy
-%defattr(-,root,root,-)
-%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
+%doc misc/snmptrap/zabbix_trap_receiver.pl
+%attr(0640,root,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
+%{_sysconfdir}/%{srcname}/zabbix_proxy.conf
 %attr(0755,zabbix,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %ghost %{_unitdir}/zabbix-proxy.service
@@ -655,41 +647,41 @@ fi
 %{_mandir}/man8/zabbix_proxy.8*
 
 %files proxy-mysql
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-proxy-mysql-%{version}/
 %{_sbindir}/zabbix_proxy_mysql
 %{_unitdir}/zabbix-proxy-mysql.service
 
 %files proxy-pgsql
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-proxy-pgsql-%{version}/
 %{_sbindir}/zabbix_proxy_pgsql
 %{_unitdir}/zabbix-proxy-pgsql.service
 
 %files proxy-sqlite3
-%defattr(-,root,root,-)
 %{_docdir}/%{srcname}-proxy-sqlite3-%{version}/
 %{_sbindir}/zabbix_proxy_sqlite3
 %{_unitdir}/zabbix-proxy-sqlite3.service
 
 %files web
-%defattr(-,root,root,-)
 %dir %attr(0750,apache,apache) %{_sysconfdir}/%{srcname}/web
 %ghost %attr(0644,apache,apache) %config(noreplace) %{_sysconfdir}/%{srcname}/web/zabbix.conf.php
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/zabbix.conf
 %{_datadir}/%{srcname}
 
 %files web-mysql
-%defattr(-,root,root,-)
 
 %files web-pgsql
-%defattr(-,root,root,-)
 
 %files web-sqlite3
-%defattr(-,root,root,-)
 
 
 %changelog
+* Thu Jul 12 2012 Dan Horák <dan[at]danny.cz> - 2.0.1-1
+- update to 2.0.1
+- rebased patches
+- upstream location (/etc) for config files is used with symlinks to the old /etc/zabbix
+- dropped our own SNMP trap processor, upstream one running directly under net-snmp daemon is used instead
+- moved zabbix_get and zabbix_sender tools to the main package
+
 * Thu Jun 28 2012 Dan Horák <dan[at]danny.cz> - 1.8.14-1
 - update to 1.8.14
 
