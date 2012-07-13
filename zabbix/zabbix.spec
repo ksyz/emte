@@ -268,7 +268,7 @@ Zabbix web frontend for SQLite
 rm -rf frontends/php/fonts
 
 # remove executable permissions
-chmod a-x upgrades/dbpatches/1.8/mysql/upgrade
+chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
 # fix up some lib64 issues
 sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
@@ -285,12 +285,6 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include/defines.inc.php \
     frontends/php/include \
     frontends/php/include/classes
-
-# fix path to traceroute utility
-for f in database/*/data.sql
-do
-    sed -i.orig -e 's|/usr/bin/traceroute|/bin/traceroute|' $f
-done
 
 # FSF address is wrong
 # https://support.zabbix.com/browse/ZBX-4108
