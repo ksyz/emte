@@ -208,6 +208,7 @@ Requires:        php-gd
 Requires:        php-bcmath
 Requires:        php-mbstring
 Requires:        php-xml
+Requires:        php-gettext
 Requires:        dejavu-sans-fonts
 Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-web-database = %{version}-%{release}
