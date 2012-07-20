@@ -16,7 +16,7 @@ Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com/
 #Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
-# upstream tarbal minus src/zabbix_java/lib/org-json-2010-12-28.jar
+# upstream tarball minus src/zabbix_java/lib/org-json-2010-12-28.jar
 Source0:        %{srcname}-%{version}-free.tar.gz
 Source1:        zabbix-web.conf
 Source5:        zabbix-logrotate.in
@@ -36,6 +36,7 @@ Patch0:         zabbix-2.0.1-config.patch
 # local rules for config files - fonts
 Patch1:         zabbix-2.0.1-fonts-config.patch
 # remove flash content (#737337)
+# https://support.zabbix.com/browse/ZBX-4794
 Patch2:         zabbix-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         zabbix-1.8.12-fping3.patch
@@ -54,7 +55,7 @@ BuildRequires:   libssh2-devel
 BuildRequires:   systemd-units
 
 Requires:        logrotate
-Requires(pre):   /usr/sbin/useradd
+Requires(pre):   shadow-utils
 %if %{srcname} != %{name}
 Conflicts:       %{srcname}
 %endif
@@ -86,7 +87,6 @@ Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-server-implementation = %{version}-%{release}
 Requires:        fping
 Requires:        traceroute
-Requires:        net-snmp
 Requires(post):  /sbin/chkconfig
 Requires(preun): /sbin/chkconfig
 Requires(preun): /sbin/service
@@ -264,19 +264,22 @@ Zabbix web frontend for SQLite
 %patch1 -p1
 %patch3 -p1
 
+# remove bundled java libs
+rm -rf src/zabbix_java/lib/*.jar
+
 # remove included fonts
 rm -rf frontends/php/fonts
 
 # remove executable permissions
 chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
-# fix up some lib64 issues
+# All libraries are expected in /usr/lib or /usr/local/lib
+# https://support.zabbix.com/browse/ZBXNEXT-1296
 sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
     configure
 
 # kill off .htaccess files, options set in SOURCE1
 rm -f frontends/php/include/.htaccess
-rm -f frontends/php/include/classes/.htaccess
 rm -f frontends/php/api/.htaccess
 rm -f frontends/php/conf/.htaccess
 
@@ -286,13 +289,11 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include \
     frontends/php/include/classes
 
-# FSF address is wrong
-# https://support.zabbix.com/browse/ZBX-4108
-
-# remove prebuild Windows binaries
+# remove prebuilt Windows binaries
 rm -rf bin
 
 # remove flash applet
+# https://support.zabbix.com/browse/ZBX-4794
 rm -f frontend/php/images/flash/zbxclock.swf
 %patch2 -p1
 
@@ -353,7 +354,7 @@ cp -a frontends/php $RPM_BUILD_ROOT%{_datadir}/%{srcname}
 # prepare ghosted config file
 touch $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/zabbix.conf.php
 
-# drop config files in place
+# drop Apache config file in place
 install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{srcname}.conf
 
 # fix config file options
@@ -620,6 +621,7 @@ fi
 %{_unitdir}/zabbix-server-sqlite3.service
 
 %files agent
+%doc conf/zabbix_agentd/*.conf
 %config(noreplace) %{_sysconfdir}/zabbix_agent.conf
 %{_sysconfdir}/%{srcname}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
