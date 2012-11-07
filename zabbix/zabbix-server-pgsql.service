@@ -1,11 +1,13 @@
 [Unit]
-Description=ZABBIX Server with PostgreSQL DB
+Description=Zabbix Server with PostgreSQL DB
 After=syslog.target network.target postgresql.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/zabbix_server_pgsql
+ExecStart=/usr/sbin/zabbix_server
 RemainAfterExit=yes
+User=zabbixsrv
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target

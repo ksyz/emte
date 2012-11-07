@@ -1,0 +1,22 @@
+diff -Nur zabbix-2.0.2/frontends/php/include/config.inc.php zabbix-2.0.2-conf/frontends/php/include/config.inc.php
+--- zabbix-2.0.2/frontends/php/include/config.inc.php	2012-07-31 11:16:47.000000000 +0200
++++ zabbix-2.0.2-conf/frontends/php/include/config.inc.php	2012-09-04 00:07:03.217816413 +0200
+@@ -31,7 +31,7 @@
+ CProfiler::getInstance()->start();
+ 
+ require_once dirname(__FILE__).'/profiles.inc.php';
+-require_once dirname(__FILE__).'/../conf/maintenance.inc.php';
++require_once '/etc/zabbix/web/maintenance.inc.php';
+ 
+ // abc sorting
+ require_once dirname(__FILE__).'/acknow.inc.php';
+@@ -64,8 +64,7 @@
+ $USER_RIGHTS = array();
+ $ZBX_LOCALNODEID = 0;
+ $ZBX_LOCMASTERID = 0;
+-$ZBX_CONFIGURATION_FILE = './conf/zabbix.conf.php';
+-$ZBX_CONFIGURATION_FILE = realpath(dirname($ZBX_CONFIGURATION_FILE)).DIRECTORY_SEPARATOR.basename($ZBX_CONFIGURATION_FILE);
++$ZBX_CONFIGURATION_FILE = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ // include tactical overview modules
+ require_once dirname(__FILE__).'/locales.inc.php';
