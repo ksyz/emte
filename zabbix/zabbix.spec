@@ -34,7 +34,7 @@
 
 %global srcname zabbix
 
-Name:           zabbix20
+Name:           zabbix
 Version:        2.0.3
 Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
