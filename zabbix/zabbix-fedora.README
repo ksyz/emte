@@ -1,21 +1,22 @@
+#TODO: SELinux
 =Custom in Fedora=
 
-_Web configuration_
+==Web configuration==
 
 Web configuration resides in /etc/zabbix/web.
 
 
-_Log files_
+==Log files==
 
 Log files are located in /var/log/zabbix.
 
 
-_Where's my Flash watch?_
+==Where's my Flash watch?==
 
 It's not included in Fedora! Fedora's policy does not allow to include blobs.
 
 
-_No htaccess files_
+==No htaccess files==
 
 Fedora ships an Apache configuration file instead. This solutions performs
 better and is easier to maintain.
@@ -23,10 +24,10 @@ better and is easier to maintain.
 
 =Additional changes from 1.8 to 2.0 in Fedora=
 
-_Zabbix 2.0 packages conflict Zabbix 1.8_
+==Zabbix 2.0 packages conflict Zabbix 1.8==
 
 This measure was taken because this major version introduces various database
-schema changes. A silent update would render Zabbix inoperational and possibly
+schema changes. A silent update would render Zabbix nonoperational and possibly
 break the database. Besides that, Zabbix 2.0 server only works with other 2.0
 servers and proxies. Distributed setups must therefore be updated at the same
 time.
@@ -34,7 +35,7 @@ time.
 http://www.zabbix.com/documentation/2.0/manual/appendix/compatibility
 
 
-_Two users_
+==Two users==
 
 There's a certain security risk involved, running agent and proxy/server as the
 same user. This package therefore introduces an additional zabbixsrv user, used
@@ -42,74 +43,76 @@ for proxy and server. Please check the permissions of your scripts and group
 memberships, if necessary.
 
 
-_Using the Alternatives system instead of conflicting sub-packages_
+==Using the Alternatives system instead of conflicting sub-packages==
 
 You can now install Zabbix proxies or servers compiled for different database
-backends on the same system. While this is not intended to happily switch back
+back-ends on the same system. While this is not intended to happily switch back
 and forth, it allows you to:
 
 - Stop the daemon
-- "Run alternatives --config zabbix-server" or "alternatives --config
-  zabbix-proxy"
+- "Run alternatives --config zabbix-server" or
+  "alternatives --config zabbix-proxy"
 - Make your choice
 - If you're using systemd, run systemctl reload
 - Adjust the configuration file
 - Start the daemon
-#TODO: Why does it need "restart" in cases?
+- In some cases you have to use "restart" instead of "start".
+  The reason is not yet clear to me.
 
-Alternatives considers the first installed implementation of server or proxy as
-default respectively.
+"Alternatives" considers the first installed implementation of server or proxy as
+default, respectively.
 
-Don't forget to reconfigure the frontend when you switch the server to a
+Don't forget to reconfigure the front-end when you switch the server to a
 different DB implementation!
 
 
-_Configuration changes_
+==Configuration changes==
 
-Zabbix 2.0 places configuration files directly in /etc and a couple of
-sub-directories. Symlinks preserve compatibility. maintenance.inc.php also moved
-to /etc/zabbix/web.  #TODO: Didn't install *.conf.d directories
+Zabbix 2.0 places configuration files directly in /etc. Symlinks preserve
+compatibility. maintenance.inc.php moved from /usr/share/zabbix/conf to
+/etc/zabbix/web.
 
 
-_Alert and media scripts_
+==Alert and media scripts==
 
 The Alert and media script directories have moved to /var/lib/zabbixsrv.
-Symlinks preserver compatibility.
+Symlinks preserve compatibility.
 
 /var/lib/zabbix is now intended for scripts run by the agent. Please move your
 server or proxy scripts to /var/lib/zabbixsrv. Be sure to check permissions and
 ownership.
 
 
-_No Java bridge_
+==No Java bridge==
 
 The Zabbix Java bridge can not be included now, due to legal issue with one of
-the modules (json).
+the modules (json). See https://support.zabbix.com/browse/ZBX-4800 and feel free
+to vote on it.
 
 
-_No Sqlite frontend or server implementation_
+==No SQLite front-end or server implementation==
 
 Sadly it doesn't work with how Fedora's/EPEL's PHP is compiled.
 
 
 --------------------------------------------------------------------------------
 
-_Guide for updating to 2.0_
+=Guide for updating to 2.0 from 1.8=
 
-http://www.zabbix.com/documentation/2.0/manual/installation/upgrade_notes
+http://www.zabbix.com/documentation/2.0/manual/installation/upgrade==notes
 
-Picking the relevant steps from
+The below should be the relevant steps, picked from
 http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
 
-- Stop the Zabbix server/proxy
-TODO: Did it already stop when uninstalling 1.8? 
 - Back up the Zabbix database (really!)
-- Make sure the database user has sufficing permissions.
+- Remove custom database changes, if any
+- Make sure the database user has sufficing permissions
+  (ALTER TABLE, DROP INDEX, DROP TABLE, ...)
 - Run the fitting database update script/s
 - The scripts can run very long, depending on the content of your database and
-  your hardware; A case running 90 hours was reported. 2.0.3 should improve the
-  situation a lot.
+  your hardware;
+- Check the output of the script for errors
 - Review all rpmnew and rpmsave files; merge where necessary
 - Review permissions, ownerships and group memberships for zabbixsrv
 
-Volker Fröhlich volker27@gmx.at Sep 15 2012
+Volker Fröhlich volker27@gmx.at Nov 8 2012

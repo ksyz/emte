@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.3
-Release:        3%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -241,6 +241,9 @@ The Zabbix proxy compiled to use SQLite
 Summary:         Zabbix Web Frontend
 Group:           Applications/Internet
 BuildArch:       noarch
+# Don't remove "php". Everything else only depends on php-common
+# and you'll end up with no module for Apache
+Requires:        php
 Requires:        php-gd
 Requires:        php-bcmath
 Requires:        php-mbstring
@@ -321,12 +324,17 @@ touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include \
     frontends/php/include/classes
 
-# fix config file options
+# Adapt configuration file options
 sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_agentd.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_agentd.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
+    -e 's|/usr/local||g' \
     conf/zabbix_agentd.conf
+
+sed -i \
+    -e 's|/usr/local||g' \
+    conf/zabbix_agent.conf
 
 sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_server.pid|g' \
@@ -336,6 +344,7 @@ sed -i \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
     -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
+    -e 's|/usr/local||g' \
     conf/zabbix_server.conf
 
 sed -i \
@@ -345,6 +354,7 @@ sed -i \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
     -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
+    -e 's|/usr/local||g' \
     conf/zabbix_proxy.conf
 
 #TODO: Ticket
@@ -428,14 +438,14 @@ install -m 0755 -p src/zabbix_proxy/zabbix_proxy_* $RPM_BUILD_ROOT%{_sbindir}/
 find frontends/php -name '*.orig' -exec rm {} \;
 cp -a frontends/php $RPM_BUILD_ROOT%{_datadir}/%{srcname}
 
-# prepare ghosted config file
+# Prepare ghosted config file
 #TODO: Simplify that? Like /etc/zabbix_web/zabbix.conf.php?
 touch $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/zabbix.conf.php
 
 # This file is used to switch the frontend to maintenance mode
 mv $RPM_BUILD_ROOT%{_datadir}/%{srcname}/conf/maintenance.inc.php $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/maintenance.inc.php
 
-# drop Apache config file in place
+# Drop Apache config file in place
 install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{srcname}.conf
 
 # install log rotation
@@ -839,6 +849,14 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Nov 13 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-5
+- Adapt httpd configuration file for Apache 2.4 (BZ#871498)
+
+* Thu Nov  8 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-4
+- Require php explicitly again
+- Remove traces of /usr/local in configuration files
+- Improve Fedora README file
+
 * Sun Oct 14 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-3
 - Correct capitalization in unit files, init scripts and package description
 - Improve sysconfig sourcing in init scripts
