@@ -4,4 +4,5 @@
 	notifempty
 	compress
 	create 0664 zabbix zabbix
+	su zabbix zabbix
 }

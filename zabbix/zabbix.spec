@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.3
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -781,7 +781,9 @@ fi
 %files agent
 %doc conf/zabbix_agentd/*.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
+%if 0%{?fedora}
 %attr(0775,root,zabbix) %dir %{_localstatedir}/run/zabbix
+%endif
 %config(noreplace) %{_sysconfdir}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
@@ -800,7 +802,9 @@ fi
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
+%if 0%{?fedora}
 %attr(0775,root,zabbix) %dir %{_localstatedir}/run/zabbix
+%endif
 %attr(0600,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
 %attr(0755,zabbixsrv,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
@@ -849,6 +853,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Nov 30 2012 Orion Poplawski <orion@cora.nwra.com> - 2.0.3-6
+- Add su line to logrotate config file
+- Do not own /var/run/zabbix on Fedora, systemd manages it
+
 * Tue Nov 13 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-5
 - Adapt httpd configuration file for Apache 2.4 (BZ#871498)
 
