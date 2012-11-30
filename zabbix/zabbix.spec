@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.3
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -286,21 +286,26 @@ Zabbix web frontend for PostgreSQL
 %patch1 -p1
 %patch3 -p1
 
-# remove flash applet
+# Logrotate's su option is currently only available in Fedora
+%if 0%{?rhel}
+sed -i '/su zabbix zabbix/d' %{SOURCE5}
+%endif
+
+# Remove flash applet
 # https://support.zabbix.com/browse/ZBX-4794
 %patch2 -p1
 rm -f frontend/php/images/flash/zbxclock.swf
 
-# remove bundled java libs
+# Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
 
-# remove prebuilt Windows binaries
+# Remove prebuilt Windows binaries
 rm -rf bin
 
-# remove included fonts
+# Remove included fonts
 rm -rf frontends/php/fonts
 
-# remove executable permissions
+# Remove executable permissions
 chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
 # All libraries are expected in /usr/lib or /usr/local/lib
@@ -308,7 +313,7 @@ chmod a-x upgrades/dbpatches/*/mysql/upgrade
 sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
     configure
 
-# kill off .htaccess files, options set in SOURCE1
+# Kill off .htaccess files, options set in SOURCE1
 rm -f frontends/php/include/.htaccess
 rm -f frontends/php/api/.htaccess
 rm -f frontends/php/conf/.htaccess
@@ -448,12 +453,12 @@ mv $RPM_BUILD_ROOT%{_datadir}/%{srcname}/conf/maintenance.inc.php $RPM_BUILD_ROO
 # Drop Apache config file in place
 install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{srcname}.conf
 
-# install log rotation
-cat %{SOURCE5} | sed -e 's|COMPONENT|agentd|g' > \
+# Install log rotation
+sed -e 's|COMPONENT|agentd|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-agent
-cat %{SOURCE5} | sed -e 's|COMPONENT|server|g' > \
+sed -e 's|COMPONENT|server|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-server
-cat %{SOURCE5} | sed -e 's|COMPONENT|proxy|g' > \
+sed -e 's|COMPONENT|proxy|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-proxy
 
 %if 0%{?fedora}
@@ -749,7 +754,9 @@ fi
 %files server
 %doc misc/snmptrap/zabbix_trap_receiver.pl
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
+%if 0%{?rhel}
 %attr(0775,root,zabbix) %dir %{_localstatedir}/run/zabbix
+%endif
 %attr(0400,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_server.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
@@ -781,7 +788,7 @@ fi
 %files agent
 %doc conf/zabbix_agentd/*.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
-%if 0%{?fedora}
+%if 0%{?rhel}
 %attr(0775,root,zabbix) %dir %{_localstatedir}/run/zabbix
 %endif
 %config(noreplace) %{_sysconfdir}/zabbix_agent.conf
@@ -802,7 +809,7 @@ fi
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
-%if 0%{?fedora}
+%if 0%{?rhel}
 %attr(0775,root,zabbix) %dir %{_localstatedir}/run/zabbix
 %endif
 %attr(0600,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
@@ -853,6 +860,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Nov 30 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-7
+- Correct and complete conditionals for /var/run/zabbix
+- su line only works in Fedora
+
 * Fri Nov 30 2012 Orion Poplawski <orion@cora.nwra.com> - 2.0.3-6
 - Add su line to logrotate config file
 - Do not own /var/run/zabbix on Fedora, systemd manages it
