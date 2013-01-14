@@ -876,6 +876,8 @@ fi
 
 %changelog
 * Mon Jan 14 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-2
+- New upstream release
+- Synchronized spec file with zabbix20
 - Apply patch for ZBX-6101
 - Add forgotten chkconfig and service commands on agent preun script
 - Add SNMP source IP address patch
