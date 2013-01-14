@@ -1,0 +1,23 @@
+Index: src/libs/zbxdbcache/dbconfig.c
+===================================================================
+--- src/libs/zbxdbcache/dbconfig.c	(revision 32723)
++++ src/libs/zbxdbcache/dbconfig.c	(revision 32724)
+@@ -3872,10 +3872,14 @@
+ 
+ 	LOCK_CACHE;
+ 
+-	if (NULL == (dc_interface = zbx_hashset_search(&config->interfaces, &interfaceid)) ||
+-			NULL == (dc_host = zbx_hashset_search(&config->hosts, &dc_interface->hostid)) ||
+-			HOST_MAINTENANCE_STATUS_OFF != dc_host->maintenance_status ||
+-			MAINTENANCE_TYPE_NORMAL != dc_host->maintenance_type)
++	if (NULL == (dc_interface = zbx_hashset_search(&config->interfaces, &interfaceid)))
++		goto unlock;
++
++	if (NULL == (dc_host = zbx_hashset_search(&config->hosts, &dc_interface->hostid)))
++		goto unlock;
++
++	if (HOST_MAINTENANCE_STATUS_ON == dc_host->maintenance_status &&
++			MAINTENANCE_TYPE_NODATA == dc_host->maintenance_type)
+ 	{
+ 		goto unlock;
+ 	}

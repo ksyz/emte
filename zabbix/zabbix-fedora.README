@@ -27,7 +27,7 @@ better and is easier to maintain.
 ==Zabbix 2.0 packages conflict Zabbix 1.8==
 
 This measure was taken because this major version introduces various database
-schema changes. A silent update would render Zabbix nonoperational and possibly
+schema changes. A silent update would render Zabbix non-operational and possibly
 break the database. Besides that, Zabbix 2.0 server only works with other 2.0
 servers and proxies. Distributed setups must therefore be updated at the same
 time.
@@ -73,10 +73,10 @@ compatibility. maintenance.inc.php moved from /usr/share/zabbix/conf to
 /etc/zabbix/web.
 
 
-==Alert and media scripts==
+==Media scripts and external scripts==
 
-The Alert and media script directories have moved to /var/lib/zabbixsrv.
-Symlinks preserve compatibility.
+The directories for external scripts and media scripts have moved to
+/var/lib/zabbixsrv. Symlinks preserve compatibility.
 
 /var/lib/zabbix is now intended for scripts run by the agent. Please move your
 server or proxy scripts to /var/lib/zabbixsrv. Be sure to check permissions and

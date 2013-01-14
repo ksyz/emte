@@ -35,8 +35,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.3
-Release:        7%{?dist}
+Version:        2.0.4
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -71,6 +71,12 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
+# Setting source IP address rendered SNMP polling broken
+# https://support.zabbix.com/browse/ZBX-3379
+Patch4:         %{srcname}-2.0.3-snmp-source-address.patch
+
+#https://support.zabbix.com/browse/ZBX-6101
+Patch5:         %{srcname}-2.0.4-snmptrap.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -284,12 +290,16 @@ Zabbix web frontend for PostgreSQL
 %setup0 -q -n %{srcname}-%{version}
 %patch0 -p1
 %patch1 -p1
+%if 0%{?fedora}
 %patch3 -p1
+%endif
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
 sed -i '/su zabbix zabbix/d' %{SOURCE5}
 %endif
+%patch4 -p0
+%patch5 -p0
 
 # Remove flash applet
 # https://support.zabbix.com/browse/ZBX-4794
@@ -652,6 +662,7 @@ getent passwd zabbixsrv > /dev/null || \
 :
 
 %preun proxy
+#TODO: Use the same style consistently
 if [ "$1" = 0 ]
 then
 %if 0%{?fedora}
@@ -665,12 +676,16 @@ fi
 :
 
 %preun agent
-%if 0%{?fedora}
 if [ $1 -eq 0 ] ; then
+%if 0%{?fedora}
   /bin/systemctl --no-reload disable zabbix-agent.service > /dev/null 2>&1 || :
   /bin/systemctl stop zabbix-agent.service > /dev/null 2>&1 || :
-fi
+%else
+  /sbin/service zabbix-agent stop >/dev/null 2>&1
+  /sbin/chkconfig --del zabbix-agent
 %endif
+fi
+:
 
 %postun server
 %if 0%{?fedora}
@@ -860,6 +875,12 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Jan 14 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-2
+- Apply patch for ZBX-6101
+- Add forgotten chkconfig and service commands on agent preun script
+- Add SNMP source IP address patch
+- Apply fping 3 patch only for Fedora
+
 * Fri Nov 30 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-7
 - Correct and complete conditionals for /var/run/zabbix
 - su line only works in Fedora
