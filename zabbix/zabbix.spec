@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -77,6 +77,10 @@ Patch4:         %{srcname}-2.0.3-snmp-source-address.patch
 
 #https://support.zabbix.com/browse/ZBX-6101
 Patch5:         %{srcname}-2.0.4-snmptrap.patch
+
+#https://support.zabbix.com/browse/ZBX-6097
+#CVE-2013-1364
+Patch6:         %{srcname}-2.0.4-ldap.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -300,6 +304,7 @@ sed -i '/su zabbix zabbix/d' %{SOURCE5}
 %endif
 %patch4 -p0
 %patch5 -p0
+%patch6 -p0
 
 # Remove flash applet
 # https://support.zabbix.com/browse/ZBX-4794
@@ -875,6 +880,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Jan 17 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-3
+- Patch for CVE-2013-1364
+
 * Mon Jan 14 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-2
 - New upstream release
 - Synchronized spec file with zabbix20
