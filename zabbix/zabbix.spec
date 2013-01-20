@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.4
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -323,6 +323,12 @@ rm -rf frontends/php/fonts
 # Remove executable permissions
 chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
+# Override statically named directory for alertscripts and externalscripts
+# https://support.zabbix.com/browse/ZBX-6159
+sed -i 's|$(DESTDIR)@datadir@/zabbix|$(DESTDIR)/var/lib/zabbixsrv|' \
+    src/zabbix_server/Makefile.in \
+    src/zabbix_proxy/Makefile.in
+
 # All libraries are expected in /usr/lib or /usr/local/lib
 # https://support.zabbix.com/browse/ZBXNEXT-1296
 sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
@@ -332,11 +338,6 @@ sed -i.orig -e 's|_LIBDIR=/usr/lib|_LIBDIR=%{_libdir}|g' \
 rm -f frontends/php/include/.htaccess
 rm -f frontends/php/api/.htaccess
 rm -f frontends/php/conf/.htaccess
-
-# Remove dispensable COPYING
-# https://support.zabbix.com/browse/ZBX-5568
-# Solved for releases after 2.0.3
-rm -rf frontends/php/conf/COPYING
 
 # set timestamp on modified config file and directories
 touch -r frontends/php/css.css frontends/php/include/config.inc.php \
@@ -403,7 +404,6 @@ common_flags="
     --with-jabber
     --with-unixodbc
     --with-ssh2
-    --datadir=%{_sharedstatedir}/zabbixsrv
 "
 
 # Frontend doesn't work for Sqlite, thus don't build server
@@ -442,12 +442,9 @@ mkdir -p $RPM_BUILD_ROOT%{_initrddir}
 # Frontend
 mkdir -p $RPM_BUILD_ROOT%{_datadir}
 
-# Home directories
-#TODO: Duplicate directory exists for unknown reason
+# Home directory for the agent;
+# The other home directory is created during installation
 mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/zabbix
-mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv
-mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/externalscripts
-mkdir -p $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/alertscripts
 
 # Install binaries
 make DESTDIR=$RPM_BUILD_ROOT install
@@ -880,6 +877,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Sun Jan 20 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-4
+- Remove origin of directories BZ#867159, comment 14 and 16
+
 * Thu Jan 17 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-3
 - Patch for CVE-2013-1364
 
