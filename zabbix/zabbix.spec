@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.4
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -831,7 +831,7 @@ fi
 %endif
 %attr(0600,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
-%attr(0755,zabbixsrv,zabbix) %dir %{_sysconfdir}/%{srcname}/externalscripts
+%config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %ghost %{_sbindir}/zabbix_proxy
 %attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/%{srcname}srv
@@ -840,8 +840,6 @@ fi
 %else
 %{_initrddir}/zabbix-proxy
 %endif
-%{_bindir}/zabbix_get
-%{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man8/zabbix_proxy.8*
 
 %files proxy-mysql
@@ -877,6 +875,11 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Jan 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-5
+- Remove zabbix_get plus manpage from the proxy files section
+- Solve conflict for externalscripts symlink between proxy and
+  server package
+
 * Sun Jan 20 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-4
 - Remove origin of directories BZ#867159, comment 14 and 16
 
