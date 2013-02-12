@@ -35,8 +35,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.4
-Release:        5%{?dist}
+Version:        2.0.5
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -71,16 +71,6 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
-# Setting source IP address rendered SNMP polling broken
-# https://support.zabbix.com/browse/ZBX-3379
-Patch4:         %{srcname}-2.0.3-snmp-source-address.patch
-
-#https://support.zabbix.com/browse/ZBX-6101
-Patch5:         %{srcname}-2.0.4-snmptrap.patch
-
-#https://support.zabbix.com/browse/ZBX-6097
-#CVE-2013-1364
-Patch6:         %{srcname}-2.0.4-ldap.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -302,9 +292,6 @@ Zabbix web frontend for PostgreSQL
 %if 0%{?rhel}
 sed -i '/su zabbix zabbix/d' %{SOURCE5}
 %endif
-%patch4 -p0
-%patch5 -p0
-%patch6 -p0
 
 # Remove flash applet
 # https://support.zabbix.com/browse/ZBX-4794
@@ -875,6 +862,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Feb 12 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.5-1
+- New upstream release
+- Drop now-included patches
+
 * Tue Jan 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-5
 - Remove zabbix_get plus manpage from the proxy files section
 - Solve conflict for externalscripts symlink between proxy and
