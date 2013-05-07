@@ -35,8 +35,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.5
-Release:        1%{?dist}
+Version:        2.0.6
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -71,6 +71,9 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
+
+# https://support.zabbix.com/browse/ZBX-6526
+Patch4:         %{srcname}-2.0.6-ZBX-6526.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -287,6 +290,7 @@ Zabbix web frontend for PostgreSQL
 %if 0%{?fedora}
 %patch3 -p1
 %endif
+%patch4 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -326,7 +330,7 @@ rm -f frontends/php/include/.htaccess
 rm -f frontends/php/api/.htaccess
 rm -f frontends/php/conf/.htaccess
 
-# set timestamp on modified config file and directories
+# Set timestamp on modified config file and directories
 touch -r frontends/php/css.css frontends/php/include/config.inc.php \
     frontends/php/include/defines.inc.php \
     frontends/php/include \
@@ -862,6 +866,13 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue May 07 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-2
+- Add patch for ZBX-6526
+- Solve permission problem with /var/run/zabbix in Fedora (BZ#904041)
+
+* Mon Apr 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-1
+- New upstream release
+
 * Tue Feb 12 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.5-1
 - New upstream release
 - Drop now-included patches

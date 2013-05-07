@@ -1,0 +1,41 @@
+Index: src/zabbix_proxy/servercomms.c
+===================================================================
+--- src/zabbix_proxy/servercomms.c	(revision 35199)
++++ src/zabbix_proxy/servercomms.c	(revision 35235)
+@@ -165,7 +165,7 @@
+ 	if (FAIL == send_data_to_server(sock, j->buffer))
+ 		goto exit;
+ 
+-	if (FAIL == zbx_recv_response(sock, NULL, 0, 0))
++	if (SUCCEED != zbx_recv_response(sock, NULL, 0, 0))
+ 		goto exit;
+ 
+ 	ret = SUCCEED;
+Index: src/zabbix_server/server.c
+===================================================================
+--- src/zabbix_server/server.c	(revision 35199)
++++ src/zabbix_server/server.c	(revision 35235)
+@@ -588,6 +588,9 @@
+ 	/* need to set trigger status to UNKNOWN since last run */
+ 	DBupdate_triggers_status_after_restart();
+ 
++	/* make initial configuration sync before worker processes are forked */
++	DCsync_configuration();
++
+ 	DBclose();
+ 
+ 	if (ZBX_MUTEX_ERROR == zbx_mutex_create_force(&node_sync_access, ZBX_MUTEX_NODE_SYNC))
+Index: src/zabbix_server/dbconfig/dbconfig.c
+===================================================================
+--- src/zabbix_server/dbconfig/dbconfig.c	(revision 35199)
++++ src/zabbix_server/dbconfig/dbconfig.c	(revision 35235)
+@@ -51,6 +51,9 @@
+ 
+ 	zabbix_log(LOG_LEVEL_DEBUG, "In main_dbconfig_loop()");
+ 
++	/* the initial configuration sync is done by server before worker processes are forked */
++	zbx_sleep_loop(CONFIG_CONFSYNCER_FREQUENCY);
++
+ 	zbx_setproctitle("%s [connecting to the database]", get_process_type_string(process_type));
+ 
+ 	DBconnect(ZBX_DB_CONNECT_NORMAL);
