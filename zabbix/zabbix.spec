@@ -36,7 +36,7 @@
 
 Name:           zabbix
 Version:        2.0.6
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -74,6 +74,10 @@ Patch3:         %{srcname}-1.8.12-fping3.patch
 
 # https://support.zabbix.com/browse/ZBX-6526
 Patch4:         %{srcname}-2.0.6-ZBX-6526.patch
+
+# Insecure use of libcurl API, CVE-2012-6086
+# https://support.zabbix.com/browse/ZBX-5924
+Patch5:         %{srcname}-2.0.6-ZBX-5924.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -291,6 +295,7 @@ Zabbix web frontend for PostgreSQL
 %patch3 -p1
 %endif
 %patch4 -p0
+%patch5 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -866,6 +871,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Jul 30 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-3
+- Backport fix for CVE-2012-6086
+
 * Tue May 07 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-2
 - Add patch for ZBX-6526
 - Solve permission problem with /var/run/zabbix in Fedora (BZ#904041)
