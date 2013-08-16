@@ -305,7 +305,7 @@ sed -i '/su zabbix zabbix/d' %{SOURCE5}
 # Remove flash applet
 # https://support.zabbix.com/browse/ZBX-4794
 %patch2 -p1
-rm -f frontend/php/images/flash/zbxclock.swf
+rm -f frontends/php/images/flash/zbxclock.swf
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
