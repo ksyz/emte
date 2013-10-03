@@ -7,7 +7,6 @@ Type=oneshot
 ExecStart=/usr/sbin/zabbix_proxy
 RemainAfterExit=yes
 User=zabbixsrv
-PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target

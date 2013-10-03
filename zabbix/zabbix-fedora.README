@@ -21,6 +21,7 @@ Log files are located in /var/log/zabbix.
 ==Where's my Flash watch?==
 
 It's not included in Fedora! Fedora's policy does not allow to include blobs.
+https://support.zabbix.com/browse/ZBX-4794
 
 
 ==No htaccess files==
@@ -101,6 +102,32 @@ to vote on it.
 
 Sadly it doesn't work with how Fedora's/EPEL's PHP is compiled.
 
+--------------------------------------------------------------------------------
+
+=SELinux=
+
+The settings necessary for you vary, depending on how you set up your system/s.
+Most of the time, the only adjustments necessary should be on the machine that
+holds the frontend:
+
+#Allow to connect the frontend to a database by other means than sockets
+setsebool -P httpd_can_network_connect_db 1
+
+#Allow the frontend to create a connection to the server listening port
+#That's the check the frontend uses to see whether the server is running.
+#This option effectively supersedes the previous
+setsebool -P httpd_can_network_connect 1
+
+Using sebools is a somewhat coarse method of allowing things.
+A more fine-grained approach for the latter would be to grab an actual
+avc denial from the audit log, pipe it through audit2allow, put it in a
+module package and load that:
+
+echo "avc:  denied  { name_connect } for  pid=20619 comm="httpd" dest=10051 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:zabbix_port_t:s0 tclass=tcp_socket" | audit2allow -M zabbix_conn_httpd; sudo semodule -i zabbix_conn_httpd.pp
+
+If you're using ping from the frontend:
+
+echo "avc:  denied  { setpgid } for  pid=31880 comm="zabbix_server_p" scontext=system_u:system_r:zabbix_t:s0 tcontext=system_u:system_r:zabbix_t:s0 tclass=process" | audit2allow -M zabbix_ping_frontend; sudo semodule -i zabbix_ping_frontend.pp
 
 --------------------------------------------------------------------------------
 
@@ -122,4 +149,4 @@ http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
 - Review all rpmnew and rpmsave files; merge where necessary
 - Review permissions, ownerships and group memberships for zabbixsrv
 
-Volker Fröhlich volker27@gmx.at Nov 8 2012
+Volker Fröhlich volker27@gmx.at Aug 14 2013

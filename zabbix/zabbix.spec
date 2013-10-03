@@ -361,6 +361,7 @@ sed -i \
     -e 's|/usr/local||g' \
     conf/zabbix_server.conf
 
+#TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_proxy.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_proxy.log|g' \
@@ -494,6 +495,9 @@ ln -sf %{_sysconfdir}/zabbix_proxy.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}
 ln -sf %{_sharedstatedir}/zabbixsrv/externalscripts $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/externalscripts
 ln -sf %{_sharedstatedir}/zabbixsrv/alertscripts $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/alertscripts
 #TODO: What does that do to existing directories?
+
+# Directory for fping spooling files 
+mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
 
 # Directory for fping spooling files 
 mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
