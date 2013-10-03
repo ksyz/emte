@@ -499,9 +499,6 @@ ln -sf %{_sharedstatedir}/zabbixsrv/alertscripts $RPM_BUILD_ROOT%{_sysconfdir}/%
 # Directory for fping spooling files 
 mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
 
-# Directory for fping spooling files 
-mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
-
 # Install sql files
 for db in postgresql mysql; do
     datadir=$RPM_BUILD_ROOT%{_datadir}/%{srcname}-$db
