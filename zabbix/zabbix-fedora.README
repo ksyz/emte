@@ -1,9 +1,16 @@
-#TODO: SELinux
 =Custom in Fedora/EPEL=
+
+==Pinger files==
+
+Since /tmp is not a good place to spool files, the pinger files shall now reside
+in /var/lib/zabbixsrv/tmp. This directory is automatically created and proxy and
+server configuration files are changed accordingly from 2.0.8 on.
 
 ==Web configuration==
 
-Web configuration resides in /etc/zabbix/web.
+Web configuration resides in /etc/zabbix/web. No need to copy or edit
+anything -- just do the configuration by accessing the frontend as soon as your
+httpd configuration allows.
 
 
 ==Log files==

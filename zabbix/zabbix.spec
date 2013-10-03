@@ -2,40 +2,24 @@
 # * F18 systemd macros, when EL6 reaches EOL
 # * Do something about mutex errors sometimes occurring when init scripts'
 #   restart is invoked; something like "sleep 2" between stop and start?
-# * Use "Include" in zabbix_{agentd,proxy,server}.conf, point to corresponding
-#   /etc/zabbix/zabbix_*.conf.d/ dir; needs patching in order to not load
+#   "Include" statement in config files needs patching in order to not load
 #   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
-#   https://support.zabbix.com/browse/ZBXNEXT-497 -- Scheduled for 2.2
+#   https://support.zabbix.com/browse/ZBXNEXT-497
 # * zabbixsrv could be member of the groups zabbixsrv and zabbix
 # * Consider using systemd's ReadWriteDirectories
-# * Consider mod_proxy patch from Debian
-#   https://support.zabbix.com/browse/ZBX-4986
 
 #TODO: systemctl reload seems to be necessary after switching with Alternatives
 #TODO: If the DB path for a Sqlite proxy is configured wrong, it requires systemctl restart. Start doesn't work.
 
-# Some info on SELinux that should go to our README
+# Allow pinger lists in /var/lib/zabbixsrv/tmp
+#echo "avc:  denied  { read } for  pid=3427 comm="fping6" path="/var/lib/zabbixsrv/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file" | audit2allow -M myzab; sudo semodule -i myzab2.pp
 
-# Allow to connect the frontend to a database
-# setsebool -P httpd_can_network_connect_db 1
-
-# Allow the frontend to check whether Zabbix server is reachable
-#echo "avc:  denied  { name_connect } for  pid=20619 comm="httpd" dest=10051 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:zabbix_port_t:s0 tclass=tcp_socket" | audit2allow -M myhttpd; sudo semodule -i myhttpd.pp
-
-#TODO: Consider filing a bug for selinux-policy
-# Allow ping from the frontend
-#echo "avc:  denied  { setpgid } for  pid=31880 comm="zabbix_server_p" scontext=system_u:system_r:zabbix_t:s0 tcontext=system_u:system_r:zabbix_t:s0 tclass=process" | audit2allow -M myzab; sudo semodule -i myzab.pp
-
-# Allow host list for pings in /tmp
-#echo "avc:  denied  { read } for  pid=3427 comm="fping6" path="/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file" | audit2allow -M myzab; sudo semodule -i myzab2.pp
-
-#type=AVC msg=audit(1346965425.718:65127): avc:  denied  { getattr } for  pid=3427 comm="fping6" path="/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file
-
+#type=AVC msg=audit(1346965425.718:65127): avc:  denied  { getattr } for  pid=3427 comm="fping6" path="/var/lib/zabbixsrv/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file
 
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.6
+Version:        2.0.8
 Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -52,7 +36,7 @@ Source4:        %{srcname}-proxy.init
 Source5:        %{srcname}-logrotate.in
 Source9:        %{srcname}-tmpfiles.conf
 # systemd units -- Alternatives switches between them (they state their dependencies)
-#TODO: Submit upstream
+# https://support.zabbix.com/browse/ZBXNEXT-1593
 Source10:       %{srcname}-agent.service
 Source11:       %{srcname}-proxy-mysql.service
 Source12:       %{srcname}-proxy-pgsql.service
@@ -71,13 +55,21 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
+# Services page broken due to missing AS in SQL
+# https://support.zabbix.com/browse/ZBX-6992
+Patch4:         %{srcname}-2.0.8-ZBX-6992.patch
 
-# https://support.zabbix.com/browse/ZBX-6526
-Patch4:         %{srcname}-2.0.6-ZBX-6526.patch
+# SQL speedup for graphs, fixed in 2.0.9
+# https://support.zabbix.com/browse/ZBX-6804
+Patch5:         %{srcname}-2.0.8-ZBX-6804.patch
 
-# Insecure use of libcurl API, CVE-2012-6086
-# https://support.zabbix.com/browse/ZBX-5924
-Patch5:         %{srcname}-2.0.6-ZBX-5924.patch
+# Failure on XML import of hosts, fixed in 2.0.9
+# https://support.zabbix.com/browse/ZBX-6922
+Patch6:         %{srcname}-2.0.8-ZBX-6922.patch
+
+# Frontend and API vulnerability to SQL injections
+# CVE-2013-5743
+Patch7:         %{srcname}-2.0.8-ZBX-7091.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -253,6 +245,7 @@ BuildArch:       noarch
 Requires:        php
 Requires:        php-gd
 Requires:        php-bcmath
+Requires:        php-ldap
 Requires:        php-mbstring
 Requires:        php-xml
 Requires:        php-gettext
@@ -296,6 +289,8 @@ Zabbix web frontend for PostgreSQL
 %endif
 %patch4 -p0
 %patch5 -p0
+%patch6 -p0
+%patch7 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -353,6 +348,7 @@ sed -i \
     -e 's|/usr/local||g' \
     conf/zabbix_agent.conf
 
+#TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
     -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/%{srcname}/zabbix_server.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/%{srcname}/zabbix_server.log|g' \
@@ -361,6 +357,7 @@ sed -i \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
     -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
+    -e 's|# TmpDir=\/tmp|TmpDir=%{_sharedstatedir}/zabbixsrv/tmp|' \
     -e 's|/usr/local||g' \
     conf/zabbix_server.conf
 
@@ -371,6 +368,7 @@ sed -i \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
     -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
+    -e 's|# TmpDir=\/tmp|TmpDir=%{_sharedstatedir}/zabbixsrv/tmp|' \
     -e 's|/usr/local||g' \
     conf/zabbix_proxy.conf
 
@@ -477,15 +475,6 @@ install -m 0644 -p %{SOURCE12} $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy-pgsql.ser
 install -m 0644 -p %{SOURCE13} $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy-sqlite3.service
 install -m 0644 -p %{SOURCE14} $RPM_BUILD_ROOT%{_unitdir}/zabbix-server-mysql.service
 install -m 0644 -p %{SOURCE15} $RPM_BUILD_ROOT%{_unitdir}/zabbix-server-pgsql.service
-# PrivateTmp available from F17 on
-%if 0%{?fedora} < 17
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-agent.service
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy-mysql.service
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy-pgsql.service
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy-sqlite3.service
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-server-mysql.service
-sed -i '/^PrivateTmp/d' $RPM_BUILD_ROOT%{_unitdir}/zabbix-server-pgsql.service
-%endif
 %else
 # init scripts
 install -m 0755 -p %{SOURCE3} $RPM_BUILD_ROOT%{_initrddir}/zabbix-agent
@@ -505,6 +494,9 @@ ln -sf %{_sysconfdir}/zabbix_proxy.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}
 ln -sf %{_sharedstatedir}/zabbixsrv/externalscripts $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/externalscripts
 ln -sf %{_sharedstatedir}/zabbixsrv/alertscripts $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/alertscripts
 #TODO: What does that do to existing directories?
+
+# Directory for fping spooling files 
+mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
 
 # Install sql files
 for db in postgresql mysql; do
@@ -776,7 +768,7 @@ fi
 %config(noreplace) %{_sysconfdir}/%{srcname}/alertscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %ghost %{_sbindir}/zabbix_server
-%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/%{srcname}srv
+%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/zabbixsrv
 %if 0%{?fedora}
 %ghost %{_unitdir}/zabbix-server.service
 %else
@@ -809,7 +801,7 @@ fi
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
-%attr(0755,zabbix,zabbix) %dir %{_sharedstatedir}/%{srcname}
+%attr(0755,zabbix,zabbix) %dir %{_sharedstatedir}/zabbix
 %if 0%{?fedora}
 %{_unitdir}/zabbix-agent.service
 %else
@@ -830,7 +822,7 @@ fi
 %config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %ghost %{_sbindir}/zabbix_proxy
-%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/%{srcname}srv
+%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/zabbixsrv
 %if 0%{?fedora}
 %ghost %{_unitdir}/zabbix-proxy.service
 %else
@@ -871,6 +863,25 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Oct  3 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-3
+- Add SQL speed-up patch (ZBX-6804)
+- Add SQL injection vulnerability patch (ZBX-7091, CVE-2013-5743)
+- Add patch for failing XML host import (ZBX-6922)
+
+* Fri Sep 13 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-2
+- Add php-ldap as a requirement for the frontend
+- Add patch for ZBX-6992
+
+* Fri Aug 23 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-1
+- New upstream release
+- Create and configure a spooling directory for fping files outside of /tmp
+- Update README to reflect that and add a SELinux section
+- Drop PrivateTmp from systemd unit files
+- Drop patch for ZBX-6526 (solved upstream)
+- Drop patch for CVE-2012-6086 (solved upstream)
+- Correct path for the flash applet when removing
+- Truncate changelog
+
 * Tue Jul 30 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-3
 - Backport fix for CVE-2012-6086
 
@@ -1186,119 +1197,3 @@ fi
 
 * Thu Sep 30 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.6-1
 - Update to final 1.6
-
-* Mon Aug 11 2008 Jason L Tibbitts III <tibbs@math.uh.edu> - 1.4.6-2
-- Fix license tag.
-
-* Fri Jul 25 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.4.6-1
-- Update to 1.4.6
-
-* Mon Jul 07 2008 Dan Horak <dan[at]danny.cz> - 1.4.5-4
-- add LSB headers into init scripts
-- disable internal log rotation
-
-* Fri May 02 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-3
-- Seems the zabbix folks replaced the original 1.4.5 tarball with
-  an updated tarball or something -- it actually does contain a
-  tiny bit of additional code... So update to newer 1.4.5.
-
-* Tue Apr 08 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.5-2
-- Fix building w/postgresql (#441456)
-
-* Tue Mar 25 2008 Jeffrey C. Ollie <jeff@ocjtech.us> - 1.4.5-1
-- Update to 1.4.5
-
-* Thu Feb 14 2008 Jarod Wilson <jwilson@redhat.com> - 1.4.4-2
-- Bump and rebuild with gcc 4.3
-
-* Mon Dec 17 2007 Jarod Wilson <jwilson@redhat.com> - 1.4.4-1
-- New upstream release
-- Fixes two crasher bugs in 1.4.3 release
-
-* Wed Dec 12 2007 Jarod Wilson <jwilson@redhat.com> - 1.4.3-1
-- New upstream release
-
-* Thu Dec 06 2007 Release Engineering <rel-eng at fedoraproject dot org> - 1.4.2-5
-- Rebuild for deps
-
-* Sat Dec 01 2007 Dan Horak <dan[at]danny.cz> 1.4.2-4
-- add security fix (#407181)
-
-* Thu Sep 20 2007 Dan Horak <dan[at]danny.cz> 1.4.2-3
-- Add a patch to clean a warning during compile
-- Add a patch to fix cpu load computations
-
-* Tue Aug 21 2007 Jarod Wilson <jwilson@redhat.com> 1.4.2-2
-- Account for binaries moving from %%_bindir to %%_sbindir
-
-* Tue Aug 21 2007 Jarod Wilson <jwilson@redhat.com> 1.4.2-1
-- New upstream release
-
-* Mon Jul 02 2007 Jarod Wilson <jwilson@redhat.com> 1.4.1-1
-- New upstream release
-
-* Fri Jun 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-3
-- Install correct sql init files (#244991)
-- Add Requires: php-bcmath to zabbix-web (#245767)
-
-* Wed May 30 2007 Jarod Wilson <jwilson@redhat.com> 1.4-2
-- Add placeholder zabbix.conf.php
-
-* Tue May 29 2007 Jarod Wilson <jwilson@redhat.com> 1.4-1
-- New upstream release
-
-* Fri Mar 30 2007 Jarod Wilson <jwilson@redhat.com> 1.1.7-1
-- New upstream release
-
-* Wed Feb 07 2007 Jarod Wilson <jwilson@redhat.com> 1.1.6-1
-- New upstream release
-
-* Thu Feb 01 2007 Jarod Wilson <jwilson@redhat.com> 1.1.5-1
-- New upstream release
-
-* Tue Jan 02 2007 Jarod Wilson <jwilson@redhat.com> 1.1.4-5
-- Add explicit R:php to zabbix-web (#220676)
-
-* Wed Dec 13 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-4
-- Fix snmp polling buffer overflow (#218065)
-
-* Wed Nov 29 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-3
-- Rebuild for updated libnetsnmp
-
-* Thu Nov 16 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-2
-- Fix up pt_br
-- Add Req-pre on useradd
-
-* Wed Nov 15 2006 Jarod Wilson <jwilson@redhat.com> 1.1.4-1
-- Update to 1.1.4
-
-* Tue Nov 14 2006 Jarod Wilson <jwilson@redhat.com> 1.1.3-3
-- Add BR: gnutls-devel, R: net-snmp-libs
-
-* Tue Nov 14 2006 Jarod Wilson <jwilson@redhat.com> 1.1.3-2
-- Fix php-pgsql Requires
-
-* Tue Nov 14 2006 Jarod Wilson <jwilson@redhat.com> 1.1.3-1
-- Update to 1.1.3
-
-* Mon Oct 02 2006 Jarod Wilson <jwilson@redhat.com> 1.1.2-1
-- Update to 1.1.2
-- Enable alternate building with postgresql support
-
-* Thu Aug 17 2006 Jarod Wilson <jwilson@redhat.com> 1.1.1-2
-- Yank out Requires: mysql-server
-- Add Requires: for php-gd and fping
-
-* Tue Aug 15 2006 Jarod Wilson <jwilson@redhat.com> 1.1.1-1
-- Update to 1.1.1
-- More macroification
-- Fix up zabbix-web Requires:
-- Prep for enabling postgres support
-
-* Thu Jul 27 2006 Jarod Wilson <jwilson@redhat.com> 1.1-2
-- Add Requires: on chkconfig and service
-- Remove openssl-devel from BR, mysql-devel pulls it in
-- Alter scriptlets to match Fedora conventions
-
-* Tue Jul 11 2006 Jarod Wilson <jwilson@redhat.com> 1.1-1
-- Initial build for Fedora Extras

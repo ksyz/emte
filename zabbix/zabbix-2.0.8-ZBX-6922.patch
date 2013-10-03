@@ -1,0 +1,21 @@
+Index: frontends/php/include/db.inc.php
+===================================================================
+--- frontends/php/include/db.inc.php	(revision 38161)
++++ frontends/php/include/db.inc.php	(revision 38173)
+@@ -1080,14 +1080,14 @@
+ 		return '1=0';
+ 	}
+ 
+-	$values = array_unique($values);
++	$values = array_keys(array_flip($values));
+ 
+ 	if ($sort) {
+ 		natsort($values);
++
++		$values = array_values($values);
+ 	}
+ 
+-	zbx_cleanHashes($values);
+-
+ 	$betweens = array();
+ 	$data = array();
