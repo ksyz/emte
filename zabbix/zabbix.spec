@@ -19,8 +19,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.8
-Release:        3%{?dist}
+Version:        2.0.9
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -55,21 +55,6 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
-# Services page broken due to missing AS in SQL
-# https://support.zabbix.com/browse/ZBX-6992
-Patch4:         %{srcname}-2.0.8-ZBX-6992.patch
-
-# SQL speedup for graphs, fixed in 2.0.9
-# https://support.zabbix.com/browse/ZBX-6804
-Patch5:         %{srcname}-2.0.8-ZBX-6804.patch
-
-# Failure on XML import of hosts, fixed in 2.0.9
-# https://support.zabbix.com/browse/ZBX-6922
-Patch6:         %{srcname}-2.0.8-ZBX-6922.patch
-
-# Frontend and API vulnerability to SQL injections
-# CVE-2013-5743
-Patch7:         %{srcname}-2.0.8-ZBX-7091.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -287,10 +272,6 @@ Zabbix web frontend for PostgreSQL
 %if 0%{?fedora}
 %patch3 -p1
 %endif
-%patch4 -p0
-%patch5 -p0
-%patch6 -p0
-%patch7 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -864,6 +845,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Wed Oct  9 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.9-1
+- New upstream release
+- Drop obsolete patches ZBX-6804, ZBX-7091, ZBX-6922, ZBX-6992
+
 * Thu Oct  3 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-3
 - Add SQL speed-up patch (ZBX-6804)
 - Add SQL injection vulnerability patch (ZBX-7091, CVE-2013-5743)
