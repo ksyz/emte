@@ -20,7 +20,7 @@
 
 Name:           zabbix
 Version:        2.0.9
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -55,6 +55,9 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
+# Fix vulnerability for remote command execution injection CVE-2013-6824
+# https://support.zabbix.com/browse/ZBX-7479
+Patch4:         %{srcname}-2.0.9-ZBX-7479.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -272,6 +275,7 @@ Zabbix web frontend for PostgreSQL
 %if 0%{?fedora}
 %patch3 -p1
 %endif
+%patch4 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -845,6 +849,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Nov  3 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.9-2
+- Fix vulnerability for remote command execution injection
+  (ZBX-7479, CVE-2013-6824)
+
 * Wed Oct  9 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.9-1
 - New upstream release
 - Drop obsolete patches ZBX-6804, ZBX-7091, ZBX-6922, ZBX-6992
