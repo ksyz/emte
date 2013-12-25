@@ -2,20 +2,18 @@
 #
 # chkconfig: - 86 14
 # description: Zabbix agent daemon
-# processname: zabbix_agentd
-# config: /etc/zabbix/zabbix_agentd.conf
 #
 
 ### BEGIN INIT INFO
 # Provides: zabbix-agent
 # Required-Start: $local_fs $network
 # Required-Stop: $local_fs $network
-# Should-Start: zabbix zabbix-proxy
-# Should-Stop: zabbix zabbix-proxy
+# Should-Start: zabbix-server zabbix-proxy
+# Should-Stop: zabbix-server zabbix-proxy
 # Default-Start:
 # Default-Stop: 0 1 2 3 4 5 6
 # Short-Description: Start and stop Zabbix agent
-# Description: Zabbix agent
+# Description: Zabbix agent daemon
 ### END INIT INFO
 
 # Source function library.
@@ -23,14 +21,25 @@
 
 exec=/usr/sbin/zabbix_agentd
 prog=${exec##*/}
-syscf=zabbix-agent
-lockfile=/var/lock/subsys/zabbix-agent
-[ -e /etc/sysconfig/$syscf ] && . /etc/sysconfig/$syscf
+syscf=${0##*/}
+lockfile=/var/lock/subsys/$syscf
+
+[ -f /etc/sysconfig/$syscf ] && . /etc/sysconfig/$syscf
+
+config=${CFG_FILE:-/etc/zabbix_agentd.conf}
+if [ ! -f $config ]; then
+	echo "Not starting Zabbix agent: Config file $config not found!" 
+	echo "Check /etc/sysconfig/$syscf"
+	exit 3
+fi
+
+pidfile=$(grep -e "^PidFile=.*$" $config | cut -d= -f2)
+param="-c $config"
 
 start()
 {
     echo -n $"Starting Zabbix agent: "
-    daemon --user zabbix $exec
+    daemon --user zabbix --pidfile "$pidfile" $exec $param
     rv=$?
     echo
     [ $rv -eq 0 ] && touch $lockfile
@@ -40,7 +49,7 @@ start()
 stop()
 {
     echo -n $"Shutting down Zabbix agent: "
-    killproc $prog
+    killproc -p "$pidfile" $prog
     rv=$?
     echo
     [ $rv -eq 0 ] && rm -f $lockfile
@@ -61,10 +70,10 @@ case "$1" in
         restart
         ;;
     status)
-        status $prog
+        status -p "$pidfile" -l $prog $exec
         ;;
     try-restart|condrestart)
-        if status $prog >/dev/null ; then
+        if status -p "$pidfile" -l $prog $exec >/dev/null ; then
             restart
         fi
         ;;

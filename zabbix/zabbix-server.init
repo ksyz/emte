@@ -6,28 +6,39 @@
 #
 
 ### BEGIN INIT INFO
-# Provides: zabbix
+# Provides: zabbix-server
 # Required-Start: $local_fs $network
 # Required-Stop: $local_fs $network
 # Default-Start:
 # Default-Stop: 0 1 2 3 4 5 6
 # Short-Description: Start and stop Zabbix server
-# Description: Zabbix server
+# Description: Zabbix server daemon
 ### END INIT INFO
 
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-exec=zabbix_server
+exec=/usr/sbin/zabbix_server
 prog=${exec##*/}
-lockfile=/var/lock/subsys/zabbix
-syscf=zabbix-server
-[ -e /etc/sysconfig/$syscf ] && . /etc/sysconfig/$syscf
+syscf=${0##*/}
+lockfile=/var/lock/subsys/$syscf
+
+[ -f /etc/sysconfig/$syscf ] && . /etc/sysconfig/$syscf
+
+config=${CFG_FILE:-/etc/zabbix_server.conf}
+if [ ! -f $config ]; then
+	echo "Not starting Zabbix server: Config file $config not found!" 
+	echo "Check /etc/sysconfig/$syscf"
+	exit 3
+fi
+
+pidfile=$(grep -e "^PidFile=.*$" $config | cut -d= -f2)
+param="-c $config"
 
 start()
 {
     echo -n $"Starting Zabbix server: "
-    daemon --user zabbixsrv $exec
+    daemon --user zabbixsrv --pidfile "$pidfile" $exec $param
     rv=$?
     echo
     [ $rv -eq 0 ] && touch $lockfile
@@ -37,7 +48,7 @@ start()
 stop()
 {
     echo -n $"Shutting down Zabbix server: "
-    killproc $prog
+    killproc -p "$pidfile" $prog
     rv=$?
     echo
     [ $rv -eq 0 ] && rm -f $lockfile
@@ -58,10 +69,10 @@ case "$1" in
         restart
         ;;
     status)
-        status $prog
+        status -p "$pidfile" -l $prog $exec
         ;;
     try-restart|condrestart)
-        if status $prog >/dev/null ; then
+        if status -p "$pidfile" -l $prog $exec >/dev/null ; then
             restart
         fi
         ;;

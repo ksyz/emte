@@ -6,6 +6,7 @@ Since /tmp is not a good place to spool files, the pinger files shall now reside
 in /var/lib/zabbixsrv/tmp. This directory is automatically created and proxy and
 server configuration files are changed accordingly from 2.0.8 on.
 
+
 ==Web configuration==
 
 Web configuration resides in /etc/zabbix/web. No need to copy or edit
@@ -72,6 +73,28 @@ default, respectively.
 
 Don't forget to reconfigure the front-end when you switch the server to a
 different DB implementation!
+
+
+==How to run multiple instances of a Zabbix daemon with init scripts==
+
+If you want to run multiple instances on the same host, do the following:
+
+- Copy the init scripts 
+- Create a file of the same name as the new init script in /etc/sysconfig
+- Define CFG_FILE="</path/to/daemon_config_file>" in this file
+- Create the file defined as CFG_FILE and adjust settings; in particular:
+ - DB settings if you set up multiple instances of server and proxy daemons;
+   IMPORTANT: Two daemons using the same database at the same time could act
+   destructive!
+ - PidFile
+ - ListenPort and/or ListenIP, if you plan for simultaneous operation;
+   Don't forget to review your firewall settings!
+ - LogFile, if you don't use syslog
+- Optionally run the following to register the new instance as a service and
+  start it up automatically:
+  chkconfig --add <init_script_name>
+  chkconfig <init_script_name> on
+- service <init_script_name> start
 
 
 ==Configuration changes==

@@ -19,7 +19,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.9
+Version:        2.0.10
 Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -55,9 +55,6 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
-# Fix vulnerability for remote command execution injection CVE-2013-6824
-# https://support.zabbix.com/browse/ZBX-7479
-Patch4:         %{srcname}-2.0.9-ZBX-7479.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -275,7 +272,6 @@ Zabbix web frontend for PostgreSQL
 %if 0%{?fedora}
 %patch3 -p1
 %endif
-%patch4 -p0
 
 # Logrotate's su option is currently only available in Fedora
 %if 0%{?rhel}
@@ -617,7 +613,7 @@ getent passwd zabbixsrv > /dev/null || \
 :
 
 %preun server
-if [ "$1" = 0 ]
+if [ $1 -eq 0 ]
 then
 %if 0%{?fedora}
   /bin/systemctl --no-reload disable zabbix-server.service > /dev/null 2>&1 || :
@@ -638,8 +634,7 @@ getent passwd zabbixsrv > /dev/null || \
 :
 
 %preun proxy
-#TODO: Use the same style consistently
-if [ "$1" = 0 ]
+if [ $1 -eq 0 ]
 then
 %if 0%{?fedora}
   /bin/systemctl --no-reload disable zabbix-proxy.service > /dev/null 2>&1 || :
@@ -849,6 +844,17 @@ fi
 %files web-pgsql
 
 %changelog
+* Sun Dec 15 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.10-2
+- The start function of the proxy init script had a typo causing failure
+- Improved the section on running multiple instances in the README
+
+* Fri Dec 13 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.10-1
+- New upstream release
+- Drop obsolete patch ZBX-7479
+- Improve init scripts to not kill other instances (BZ#1018293)
+- General overhaul of init scripts and documentation in README
+- Harmonize scriptlet if-clause style
+
 * Tue Nov  3 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.9-2
 - Fix vulnerability for remote command execution injection
   (ZBX-7479, CVE-2013-6824)
