@@ -9,10 +9,9 @@ server configuration files are changed accordingly from 2.0.8 on.
 
 ==Web configuration==
 
-Web configuration resides in /etc/zabbix/web. No need to copy or edit
-anything -- just do the configuration by accessing the frontend as soon as your
-httpd configuration allows.
-
+Web configuration resides in /etc/zabbix/web. The configuration file can be
+created manually or by walking through the frontend setup tool, as soon as your
+httpd configuration allows. The directory also contains maintenance.inc.php!
 
 ==Log files==
 
@@ -21,7 +20,7 @@ Log files are located in /var/log/zabbix.
 
 ==Where's my Flash watch?==
 
-It's not included in Fedora! Fedora's policy does not allow to include blobs.
+It's not included in Fedora! Fedora's policy does not allow to include blobs:
 https://support.zabbix.com/browse/ZBX-4794
 
 
@@ -154,13 +153,15 @@ echo "avc:  denied  { setpgid } for  pid=31880 comm="zabbix_server_p" scontext=s
 
 --------------------------------------------------------------------------------
 
-=Guide for updating to 2.0 from 1.8=
+=Guide for upgrading to 2.0 from 1.8=
 
 http://www.zabbix.com/documentation/2.0/manual/installation/upgrade==notes
 
 The below should be the relevant steps, picked from
 http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
 
+- Review all rpmnew and rpmsave files; merge where necessary
+- Review permissions, ownerships and group memberships for zabbixsrv
 - Back up the Zabbix database (really!)
 - Remove custom database changes, if any
 - Make sure the database user has sufficing permissions
@@ -169,7 +170,5 @@ http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
 - The scripts can run very long, depending on the content of your database and
   your hardware;
 - Check the output of the script for errors
-- Review all rpmnew and rpmsave files; merge where necessary
-- Review permissions, ownerships and group memberships for zabbixsrv
 
-Volker Fröhlich volker27@gmx.at Aug 14 2013
+Volker Fröhlich volker27@gmx.at Jan  3 2013
