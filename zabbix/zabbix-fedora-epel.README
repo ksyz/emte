@@ -13,9 +13,11 @@ Web configuration resides in /etc/zabbix/web. The configuration file can be
 created manually or by walking through the frontend setup tool, as soon as your
 httpd configuration allows. The directory also contains maintenance.inc.php!
 
+
 ==Log files==
 
-Log files are located in /var/log/zabbix.
+Log files are located in /var/log/zabbix for the agent and /var/log/zabbixsrv.
+for server and proxy.
 
 
 ==Where's my Flash watch?==
@@ -30,20 +32,7 @@ Fedora ships an Apache configuration file instead. This solutions performs
 better and is easier to maintain.
 
 
-=Additional changes from 1.8 to 2.0 in Fedora=
-
-==Zabbix 2.0 packages conflict Zabbix 1.8==
-
-This measure was taken because this major version introduces various database
-schema changes. A silent update would render Zabbix non-operational and possibly
-break the database. Besides that, Zabbix 2.0 server only works with other 2.0
-servers and proxies. Distributed setups must therefore be updated at the same
-time.
-
-http://www.zabbix.com/documentation/2.0/manual/appendix/compatibility
-
-
-==Two users==
+==Two users and groups==
 
 There's a certain security risk involved, running agent and proxy/server as the
 same user. This package therefore introduces an additional zabbixsrv user, used
@@ -78,7 +67,7 @@ different DB implementation!
 
 If you want to run multiple instances on the same host, do the following:
 
-- Copy the init scripts 
+- Copy or symlink the init scripts 
 - Create a file of the same name as the new init script in /etc/sysconfig
 - Define CFG_FILE="</path/to/daemon_config_file>" in this file
 - Create the file defined as CFG_FILE and adjust settings; in particular:
@@ -98,7 +87,7 @@ If you want to run multiple instances on the same host, do the following:
 
 ==Configuration changes==
 
-Zabbix 2.0 places configuration files directly in /etc. Symlinks preserve
+Zabbix 2.0/2.2 place configuration files directly in /etc. Symlinks preserve
 compatibility. maintenance.inc.php moved from /usr/share/zabbix/conf to
 /etc/zabbix/web.
 
@@ -124,7 +113,6 @@ to vote on it.
 
 Sadly it doesn't work with how Fedora's/EPEL's PHP is compiled.
 
---------------------------------------------------------------------------------
 
 =SELinux=
 
@@ -151,11 +139,77 @@ If you're using ping from the frontend:
 
 echo "avc:  denied  { setpgid } for  pid=31880 comm="zabbix_server_p" scontext=system_u:system_r:zabbix_t:s0 tcontext=system_u:system_r:zabbix_t:s0 tclass=process" | audit2allow -M zabbix_ping_frontend; sudo semodule -i zabbix_ping_frontend.pp
 
+
+=Additional packaging changes in Fedora/EPEL since 2.0=
+
+==Zabbix 2.2 conflicts 1.8 and 2.0==
+
+Please see the below section for the reason!
+
+
+==Agent init script/unit file name==
+For the sake of consistency between distributions, the agent init script,
+respectively the systemd unit file, was renamed to zabbix-agentd -- mind the
+trailing "d"! Symlinks with the old names are in place. Keep in mind, if
+you created a configuration file in /etc/sysconfig, the sourced file must
+the name of the init script you invoke! Consequently, if you decide to use
+zabbix-agentd in the future, copy or symlink this file.
+
+
+==zabbixsrv now has its own user group==
+
+zabbixsrv used to be a member of the zabbix user group. Completely fresh
+installations will create the zabbixsrv group and assign it as the primary
+group. If the user zabbixsrv already exists (upgrade from 2.0), the user group
+is replaced.
+
+
+==Log and lock file locations, group membership==
+
+All logs used to be in /var/log/zabbix. With zabbixsrv having its own
+user group, the logs are now split between /var/log/zabbix for the agent and
+/var/log/zabbixsrv for server and proxy.
+
+
+=Additional packaging changes in Fedora/EPEL since 1.8=
+
+==Zabbix 2.0 packages conflict Zabbix 1.8; 2.2 conflicts 1.8 and 2.0==
+
+This measure was taken because this major version introduces various database
+schema changes. A silent update would render Zabbix non-operational and possibly
+break the database. Besides that, Zabbix 2.0/2.2 server only works with the
+respective major versions of servers and proxies. Distributed setups must
+therefore be updated at the same time to keep working.
+
+http://www.zabbix.com/documentation/2.0/manual/appendix/compatibility
+http://www.zabbix.com/documentation/2.2/manual/appendix/compatibility
+
 --------------------------------------------------------------------------------
+
+=Guide for upgrading to 2.2 from 2.0=
+
+https://www.zabbix.com/documentation/2.2/manual/installation/upgrade
+https://www.zabbix.com/documentation/2.2/manual/installation/upgrade_notes_220
+
+Be sure to read the upgrades notes of the latest minor release too!
+
+- Review all rpmnew and rpmsave files; merge where necessary
+- Review permissions, ownerships and group memberships for zabbixsrv
+- Migrate server and proxy logs to the new location, if you want
+- Back up the Zabbix database (really!)
+- Remove custom database changes, if any
+- Make sure the database user has sufficing permissions
+  (ALTER TABLE, DROP INDEX, DROP TABLE, ...)
+- Start the server
+- Check the server log for progress and possible errors
+  The schema conversion should finish within minutes or hours
+
 
 =Guide for upgrading to 2.0 from 1.8=
 
-http://www.zabbix.com/documentation/2.0/manual/installation/upgrade==notes
+https://www.zabbix.com/documentation/2.0/manual/installation/upgrade_notes?s[]=upgrade&s[]=notes&s[]=2&s[]=0
+
+Be sure to read the upgrades notes of the latest minor release too!
 
 The below should be the relevant steps, picked from
 http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
@@ -171,4 +225,4 @@ http://www.zabbix.com/documentation/2.0/manual/installation/upgrade
   your hardware;
 - Check the output of the script for errors
 
-Volker Fröhlich volker27@gmx.at Jan  3 2013
+Volker Fröhlich volker27@gmx.at Jan  5 2013

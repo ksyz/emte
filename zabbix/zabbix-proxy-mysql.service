@@ -1,5 +1,5 @@
 [Unit]
-Description=Zabbix MySQL Proxy Agent
+Description=Zabbix MySQL Proxy
 After=syslog.target network.target mysqld.service
 
 [Service]

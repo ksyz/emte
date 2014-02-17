@@ -1,4 +1,5 @@
 # TODO, maybe sometime:
+# * Allow for nginx?
 # * F18 systemd macros, when EL6 reaches EOL
 # * Do something about mutex errors sometimes occurring when init scripts'
 #   restart is invoked; something like "sleep 2" between stop and start?
@@ -10,16 +11,11 @@
 #TODO: systemctl reload seems to be necessary after switching with Alternatives
 #TODO: If the DB path for a Sqlite proxy is configured wrong, it requires systemctl restart. Start doesn't work.
 
-# Allow pinger lists in /var/lib/zabbixsrv/tmp
-#echo "avc:  denied  { read } for  pid=3427 comm="fping6" path="/var/lib/zabbixsrv/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file" | audit2allow -M myzab; sudo semodule -i myzab2.pp
-
-#type=AVC msg=audit(1346965425.718:65127): avc:  denied  { getattr } for  pid=3427 comm="fping6" path="/var/lib/zabbixsrv/tmp/zabbix_server_pgsql_3002.pinger" dev=dm-1 ino=20 scontext=system_u:system_r:ping_t:s0 tcontext=system_u:object_r:initrc_tmp_t:s0 tclass=file
-
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.0.11
-Release:        2%{?dist}
+Version:        2.2.2
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -30,7 +26,7 @@ URL:            http://www.zabbix.com
 Source0:        %{srcname}-%{version}-free.tar.gz
 Source1:        %{srcname}-web.conf
 Source5:        %{srcname}-logrotate.in
-Source9:        %{srcname}-tmpfiles.conf
+Source9:        %{srcname}-tmpfiles-zabbix.conf
 # systemd units -- Alternatives switches between them (they state their dependencies)
 # https://support.zabbix.com/browse/ZBXNEXT-1593
 Source10:       %{srcname}-agent.service
@@ -39,11 +35,11 @@ Source12:       %{srcname}-proxy-pgsql.service
 Source13:       %{srcname}-proxy-sqlite3.service
 Source14:       %{srcname}-server-mysql.service
 Source15:       %{srcname}-server-pgsql.service
-
-Source16:       %{srcname}-fedora.README
+Source16:       %{srcname}-fedora-epel.README
+Source17:        %{srcname}-tmpfiles-zabbixsrv.conf
 
 # local rules for config files
-Patch0:         %{srcname}-2.0.2-config.patch
+Patch0:         %{srcname}-2.1.9-config.patch
 # local rules for config files - fonts
 Patch1:         %{srcname}-2.0.3-fonts-config.patch
 # remove flash content (#737337)
@@ -63,12 +59,16 @@ BuildRequires:   unixODBC-devel
 BuildRequires:   curl-devel
 BuildRequires:   OpenIPMI-devel
 BuildRequires:   libssh2-devel
+BuildRequires:   libxml2-devel
 BuildRequires:   systemd
 
 Requires:        logrotate
+Provides:        bundled(md5-deutsch)
 # Could alternatively be conditional on Fedora/EL
 %if %{srcname} != %{name}
-Conflicts:       %{srcname}
+Provides:        %{srcname} = %{version}-%{release}
+Conflicts:       %{srcname} < 2.2
+Conflicts:       %{srcname}20
 %else
 Obsoletes:       %{srcname}-docs < 1.8.15-2
 Obsoletes:       %{srcname}-web-sqlite3 < 2.0.3-3
@@ -91,6 +91,33 @@ play an important role in monitoring IT infrastructure. This is equally true
 for small organizations with a few servers and for large companies with a
 multitude of servers.
 
+%package dbfiles-mysql
+Summary:             Zabbix database schemas, images, data and patches
+Group:               Applications/Internet
+BuildArch:           noarch
+
+%description dbfiles-mysql
+Zabbix database schemas, images, data and patches necessary for creating
+and/or updating MySQL databases
+
+%package dbfiles-pgsql
+Summary:             Zabbix database schemas, images, data and patches
+Group:               Applications/Internet
+BuildArch:           noarch
+
+%description dbfiles-pgsql
+Zabbix database schemas, images, data and patches necessary for creating
+and/or updating PostgreSQL databases
+
+%package dbfiles-sqlite3
+Summary:             Zabbix database schemas and patches
+Group:               Applications/Internet
+BuildArch:           noarch
+
+%description dbfiles-sqlite3
+Zabbix database schemas and patches necessary for creating
+and/or updating SQLite databases
+
 %package server
 Summary:             Zabbix server common files
 Group:               Applications/Internet
@@ -110,6 +137,7 @@ Zabbix server common files
 Summary:             Zabbix server compiled to use MySQL
 Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
+Requires:            %{name}-dbfiles-mysql
 Requires:            %{name}-server = %{version}-%{release}
 Requires(post):      %{_sbindir}/update-alternatives
 Requires(preun):     %{_sbindir}/alternatives
@@ -120,17 +148,18 @@ Provides:            %{name}-server-implementation = %{version}-%{release}
 Zabbix server compiled to use MySQL
 
 %package server-pgsql
-Summary:             Zabbix server compiled to use PostgresSQL
+Summary:             Zabbix server compiled to use PostgreSQL
 Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-server = %{version}-%{release}
+Requires:            %{name}-dbfiles-pgsql
 Requires(post):      %{_sbindir}/update-alternatives
 Requires(preun):     %{_sbindir}/alternatives
 Requires(postun):    %{_sbindir}/update-alternatives
 Provides:            %{name}-server-implementation = %{version}-%{release}
 
 %description server-pgsql
-Zabbix server compiled to use PostgresSQL
+Zabbix server compiled to use PostgreSQL
 
 %package agent
 Summary:             Zabbix Agent
@@ -162,6 +191,7 @@ The Zabbix proxy
 Summary:             Zabbix proxy compiled to use MySQL
 Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
+Requires:            %{name}-dbfiles-mysql
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
 Requires(post):      %{_sbindir}/update-alternatives
 Requires(preun):     %{_sbindir}/alternatives
@@ -174,6 +204,7 @@ The Zabbix proxy compiled to use MySQL
 Summary:             Zabbix proxy compiled to use PostgreSQL
 Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
+Requires:            %{name}-dbfiles-pgsql
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
 Requires(post):      %{_sbindir}/update-alternatives
 Requires(preun):     %{_sbindir}/alternatives
@@ -186,6 +217,7 @@ The Zabbix proxy compiled to use PostgreSQL
 Summary:             Zabbix proxy compiled to use SQLite
 Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
+Requires:            %{name}-dbfiles-sqlite3
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
 Requires(post):      %{_sbindir}/update-alternatives
 Requires(preun):     %{_sbindir}/alternatives
@@ -250,9 +282,6 @@ rm -f frontends/php/images/flash/zbxclock.swf
 
 %patch3 -p1
 
-# Logrotate's su option is only available in Fedora and EL 7
-sed -i '/su zabbix zabbix/d' %{SOURCE5}
-
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
 
@@ -290,8 +319,8 @@ sed -i \
 
 #TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
-    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_server.pid|g' \
-    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_server.log|g' \
+    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbixsrv/zabbix_server.pid|g' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_server.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|# AlertScriptsPath=${datadir}/zabbix/|AlertScriptsPath=%{_sharedstatedir}/zabbixsrv/|g' \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
@@ -303,8 +332,8 @@ sed -i \
 
 #TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
-    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_proxy.pid|g' \
-    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_proxy.log|g' \
+    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbixsrv/zabbix_proxy.pid|g' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_proxy.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
     -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
@@ -321,7 +350,7 @@ sed -i 's|/usr/local||g' \
     upgrades/dbpatches/2.0/postgresql/patch.sql
 
 # Install README file
-install -m0644 %{SOURCE16} .
+install -m 0644 -p %{SOURCE16} .
 
 
 %build
@@ -339,6 +368,7 @@ common_flags="
     --with-jabber
     --with-unixodbc
     --with-ssh2
+    --with-libxml2
 "
 
 # Frontend doesn't work for SQLite, thus don't build server
@@ -368,7 +398,9 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/zabbix
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/zabbixsrv
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/zabbix
+mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/zabbixsrv
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 
 # Frontend
@@ -398,11 +430,11 @@ mv $RPM_BUILD_ROOT%{_datadir}/%{srcname}/conf/maintenance.inc.php $RPM_BUILD_ROO
 install -m 0644 -p %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d/%{srcname}.conf
 
 # Install log rotation
-sed -e 's|COMPONENT|agentd|g' %{SOURCE5} > \
+sed -e 's|COMPONENT|agentd|g; s|USER|zabbix|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-agent
-sed -e 's|COMPONENT|server|g' %{SOURCE5} > \
+sed -e 's|COMPONENT|server|g; s|USER|zabbixsrv|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-server
-sed -e 's|COMPONENT|proxy|g' %{SOURCE5} > \
+sed -e 's|COMPONENT|proxy|g; s|USER|zabbixsrv|g' %{SOURCE5} > \
      $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/zabbix-proxy
 
 # Install different systemd units because of the requirements for DBMS daemons
@@ -433,7 +465,7 @@ mkdir $RPM_BUILD_ROOT%{_sharedstatedir}/zabbixsrv/tmp
 # Install sql files
 for db in postgresql mysql; do
     datadir=$RPM_BUILD_ROOT%{_datadir}/%{srcname}-$db
-    install -dm 755 $datadir/upgrades/{1.6,1.8,2.0}
+    install -dm 0755 $datadir/upgrades/{1.6,1.8,2.0}
     cp -p database/$db/* $datadir
     cp -pR upgrades/dbpatches/1.6/$db/* $datadir/upgrades/1.6
     cp -pR upgrades/dbpatches/1.8/$db/* $datadir/upgrades/1.8
@@ -445,7 +477,8 @@ cp -p database/sqlite3/schema.sql $RPM_BUILD_ROOT%{_datadir}/%{srcname}-sqlite3
 
 # systemd must create /var/run/%{srcname}
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d
-install -m 0644 %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbix.conf
+install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbix.conf
+install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
 
 
 %post server
@@ -509,20 +542,34 @@ getent passwd zabbix > /dev/null || \
 %systemd_post zabbix-agent.service
 
 %pre server
-getent group zabbix > /dev/null || groupadd -r zabbix
-getent passwd zabbixsrv > /dev/null || \
-    useradd -r -g zabbix -d %{_sharedstatedir}/zabbixsrv -s /sbin/nologin \
+getent group zabbixsrv > /dev/null || groupadd -r zabbixsrv
+# The zabbixsrv group is introduced by 2.2 packaging
+# The zabbixsrv user was a member of the zabbix group in 2.0
+if getent passwd zabbixsrv > /dev/null; then
+    if [[ $(id -gn zabbixsrv) == "zabbix" ]]; then
+        usermod -c "Zabbix Monitoring System -- Proxy or server" -g zabbixsrv zabbixsrv
+    fi
+else
+    useradd -r -g zabbixsrv -d %{_sharedstatedir}/zabbixsrv -s /sbin/nologin \
     -c "Zabbix Monitoring System -- Proxy or server" zabbixsrv
+fi
 :
 
 %preun server
   %systemd_preun zabbix-server.service
 
 %pre proxy
-getent group zabbix > /dev/null || groupadd -r zabbix
-getent passwd zabbixsrv > /dev/null || \
-    useradd -r -g zabbix -d %{_sharedstatedir}/zabbixsrv -s /sbin/nologin \
+getent group zabbixsrv > /dev/null || groupadd -r zabbixsrv
+# The zabbixsrv group is introduced by 2.2 packaging
+# The zabbixsrv user was a member of the zabbix group in 2.0
+if getent passwd zabbixsrv > /dev/null; then
+    if [[ $(id -gn zabbixsrv) == "zabbix" ]]; then
+        usermod -c "Zabbix Monitoring System -- Proxy or server" -g zabbixsrv zabbixsrv
+    fi
+else
+    useradd -r -g zabbixsrv -d %{_sharedstatedir}/zabbixsrv -s /sbin/nologin \
     -c "Zabbix Monitoring System -- Proxy or server" zabbixsrv
+fi
 :
 
 %preun proxy
@@ -567,7 +614,7 @@ fi
 
 
 %files
-%doc AUTHORS ChangeLog COPYING NEWS README %{srcname}-fedora.README
+%doc AUTHORS ChangeLog COPYING NEWS README zabbix-fedora-epel.README
 %dir %{_sysconfdir}/%{srcname}
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
@@ -577,16 +624,32 @@ fi
 %{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man1/zabbix_sender.1*
 
+%files dbfiles-mysql
+%doc COPYING
+%{_datadir}/%{srcname}-mysql/
+
+%files dbfiles-pgsql
+%doc COPYING
+%{_datadir}/%{srcname}-postgresql/
+
+%files dbfiles-sqlite3
+%doc COPYING
+%{_datadir}/%{srcname}-sqlite3/
+
 %files server
 %doc misc/snmptrap/zabbix_trap_receiver.pl
-%attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
-%attr(0600,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
+%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
+%attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
+%attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_server.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/%{srcname}/alertscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-server
 %ghost %{_sbindir}/zabbix_server
-%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/zabbixsrv
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/tmp
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/alertscripts
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/externalscripts
 %ghost %{_unitdir}/zabbix-server.service
 %{_mandir}/man8/zabbix_server.8*
 
@@ -602,13 +665,14 @@ fi
 
 %files agent
 %doc conf/zabbix_agentd/*.conf
+%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
 %config(noreplace) %{_sysconfdir}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
-%attr(0755,zabbix,zabbix) %dir %{_sharedstatedir}/zabbix
+%attr(750,zabbix,zabbix) %dir %{_sharedstatedir}/zabbix
 %{_unitdir}/zabbix-agent.service
 %{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
@@ -616,13 +680,17 @@ fi
 
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
-%attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
-%attr(0600,zabbixsrv,zabbix) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
+%attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
+%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
+%attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-proxy
 %ghost %{_sbindir}/zabbix_proxy
-%attr(0755,zabbixsrv,zabbix) %{_sharedstatedir}/zabbixsrv
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/tmp
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/alertscripts
+%attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/externalscripts
 %ghost %{_unitdir}/zabbix-proxy.service
 %{_mandir}/man8/zabbix_proxy.8*
 
@@ -653,6 +721,24 @@ fi
 %files web-pgsql
 
 %changelog
+* Sun Feb 16 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.2-1
+- New major release
+- Preserve timestamp on all install commands
+- Provide bundled md5-deutsch
+- Add noarch sub-packages for DB files
+- Correct directory permissions
+- Correct Conflicts directives
+- Correct /var/lib/zabbixsrv owner and permissions
+- Use dir directive for home directories and their sub-directories
+- Update config patch
+- Provide "zabbix"
+- Add libxml2-devel as BR for VMware monitoring and --with-libxml2 flag
+- Move user zabbixsrv to his own group
+  - Split tmpfiles.d, thus solve BZ#982001 
+  - Split lock, log and run locations
+  - Adapt ownership and permissions
+- Update README
+
 * Sun Feb 16 2014 Volker Fröhlich <volker27@gmx.at> - 2.0.11-2
 - Remove if clauses for Fedora/RHEL as they are obsolete in EL 7
 - Use systemd scriplet macros (BZ#850378)
@@ -681,7 +767,7 @@ fi
 - New upstream release
 - Drop obsolete patches ZBX-6804, ZBX-7091, ZBX-6922, ZBX-6992
 
-* Thu Oct  3 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-3
+* Mon Sep 23 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.8-3
 - Add SQL speed-up patch (ZBX-6804)
 - Add SQL injection vulnerability patch (ZBX-7091, CVE-2013-5743)
 - Add patch for failing XML host import (ZBX-6922)
@@ -706,40 +792,49 @@ fi
 * Tue May 07 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-2
 - Add patch for ZBX-6526
 - Solve permission problem with /var/run/zabbix in Fedora (BZ#904041)
+- Remove origin of directories BZ#867159, comment 14 and 16
 
 * Mon Apr 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.6-1
 - New upstream release
+- Drop ZBX-6290 and ZBX-6318 patches
+
+* Tue Mar 19 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.5-3
+- Include patch for ZBX-6318
+
+* Tue Feb 12 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.5-2
+- Include patch for ZBX-6290
 
 * Tue Feb 12 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.5-1
 - New upstream release
 - Drop now-included patches
+- Init file comments point to the actual configuration files now
 
-* Tue Jan 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-5
+* Sat Feb  9 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-5
+- Dispensable version of COPYING is no more
+- Correct path to traceroute in DB dumps again
+
+* Tue Jan 22 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-4
 - Remove zabbix_get plus manpage from the proxy files section
 - Solve conflict for externalscripts symlink between proxy and
   server package
-
-* Sun Jan 20 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-4
-- Remove origin of directories BZ#867159, comment 14 and 16
 
 * Thu Jan 17 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-3
 - Patch for CVE-2013-1364
 
 * Mon Jan 14 2013 Volker Fröhlich <volker27@gmx.at> - 2.0.4-2
-- New upstream release
-- Synchronized spec file with zabbix20
 - Apply patch for ZBX-6101
-- Add forgotten chkconfig and service commands on agent preun script
-- Add SNMP source IP address patch
-- Apply fping 3 patch only for Fedora
-
-* Fri Nov 30 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-7
-- Correct and complete conditionals for /var/run/zabbix
-- su line only works in Fedora
-
-* Fri Nov 30 2012 Orion Poplawski <orion@cora.nwra.com> - 2.0.3-6
 - Add su line to logrotate config file
 - Do not own /var/run/zabbix on Fedora, systemd manages it
+- Add forgotten chkconfig and service commands on agent preun script
+
+* Sat Dec  8 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.4-1
+- New upstream release
+
+* Fri Dec  7 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-7
+- Add SNMP source IP address patch
+
+* Mon Nov 26 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-6
+- Apply fping 3 patch only for Fedora
 
 * Tue Nov 13 2012 Volker Fröhlich <volker27@gmx.at> - 2.0.3-5
 - Adapt httpd configuration file for Apache 2.4 (BZ#871498)

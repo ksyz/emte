@@ -1,8 +1,8 @@
-/var/log/zabbix/zabbix_COMPONENT.log {
+/var/log/USER/zabbix_COMPONENT.log {
 	missingok
 	monthly
 	notifempty
 	compress
-	create 0664 zabbix zabbix
-	su zabbix zabbix
+	create 0664 USER USER
+	su USER USER
 }

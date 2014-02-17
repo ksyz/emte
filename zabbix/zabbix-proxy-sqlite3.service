@@ -1,5 +1,5 @@
 [Unit]
-Description=Zabbix SQLite3 Proxy Agent
+Description=Zabbix SQLite3 Proxy
 After=syslog.target network.target
 
 [Service]
