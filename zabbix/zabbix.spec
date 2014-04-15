@@ -14,7 +14,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.2.2
+Version:        2.2.3
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -721,6 +721,10 @@ fi
 %files web-pgsql
 
 %changelog
+%changelog
+* Tue Apr 15 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-1
+- New upstream release
+
 * Sun Feb 16 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.2-1
 - New major release
 - Preserve timestamp on all install commands
