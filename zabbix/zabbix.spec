@@ -721,7 +721,6 @@ fi
 %files web-pgsql
 
 %changelog
-%changelog
 * Tue Apr 15 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-1
 - New upstream release
 
