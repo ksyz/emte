@@ -15,7 +15,7 @@
 
 Name:           zabbix
 Version:        2.2.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -721,6 +721,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.3-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
 * Tue Apr 15 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-1
 - New upstream release
 
