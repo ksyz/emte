@@ -15,7 +15,7 @@
 
 Name:           zabbix
 Version:        2.2.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -47,6 +47,9 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
+
+# ZBX-8238 -- logrt may continue reading an old file repeatedly
+Patch4:         %{srcname}-2.2.3-zbx8238.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -281,6 +284,7 @@ Zabbix web frontend for PostgreSQL
 rm -f frontends/php/images/flash/zbxclock.swf
 
 %patch3 -p1
+%patch4 -p1
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -721,6 +725,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Sun Jun  8 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-3
+- Patch for ZBX-8238 (logrt may continue reading an old file repeatedly)
+
 * Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.3-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
 
