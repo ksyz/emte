@@ -14,8 +14,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.2.3
-Release:        4%{?dist}
+Version:        2.2.4
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -728,6 +728,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Jun 24 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.4-1
+- New upstream release
+
 * Fri Jun 20 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-4
 - Patch for ZBX-8151 (Local file inclusion via XXE attack) -- CVE-2014-3005
 
