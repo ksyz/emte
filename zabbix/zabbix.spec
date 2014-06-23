@@ -47,11 +47,6 @@ Patch1:         %{srcname}-2.0.3-fonts-config.patch
 Patch2:         %{srcname}-2.0.1-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
-# ZBX-8238 -- logrt may continue reading an old file repeatedly
-Patch4:         %{srcname}-2.2.3-zbx8238.patch
-# Local file inclusion via XXE attack (CVE-2014-3005)
-# https://support.zabbix.com/browse/ZBX-8151
-Patch5:         %{srcname}-2.2.3-zbx8151.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -286,8 +281,6 @@ Zabbix web frontend for PostgreSQL
 rm -f frontends/php/images/flash/zbxclock.swf
 
 %patch3 -p1
-%patch4 -p1
-%patch5 -p0
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -730,6 +723,7 @@ fi
 %changelog
 * Tue Jun 24 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.4-1
 - New upstream release
+- Remove obsolete patches
 
 * Fri Jun 20 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.3-4
 - Patch for ZBX-8151 (Local file inclusion via XXE attack) -- CVE-2014-3005
