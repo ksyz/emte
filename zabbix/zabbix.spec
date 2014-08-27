@@ -14,16 +14,14 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.2.5
-Release:        2%{?dist}
+Version:        2.2.6
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com
-#Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
-# upstream tarball minus src/zabbix_java/lib/org-json-2010-12-28.jar
-Source0:        %{srcname}-%{version}-free.tar.gz
+Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
 Source1:        %{srcname}-web.conf
 Source5:        %{srcname}-logrotate.in
 Source9:        %{srcname}-tmpfiles-zabbix.conf
@@ -721,6 +719,10 @@ fi
 %files web-pgsql
 
 %changelog
+* Wed Aug 27 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.6-1
+- New upstream release
+- Use the upstream tarball, now that non-free json was replaced with android-json
+
 * Mon Aug 18 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.2.5-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
 
