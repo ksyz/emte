@@ -15,7 +15,7 @@
 
 Name:           zabbix
 Version:        2.2.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -119,6 +119,7 @@ and/or updating SQLite databases
 %package server
 Summary:             Zabbix server common files
 Group:               Applications/Internet
+BuildArch:           noarch
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-server-implementation = %{version}-%{release}
 Requires:            fping
@@ -160,7 +161,7 @@ Provides:            %{name}-server-implementation = %{version}-%{release}
 Zabbix server compiled to use PostgreSQL
 
 %package agent
-Summary:             Zabbix Agent
+Summary:             Zabbix agent
 Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
 Requires(pre):       shadow-utils
@@ -169,11 +170,12 @@ Requires(preun):     systemd
 Requires(postun):    systemd
 
 %description agent
-The Zabbix client agent, to be installed on monitored systems.
+Zabbix agent, to be installed on monitored systems
 
 %package proxy
-Summary:             Zabbix Proxy
+Summary:             Zabbix proxy common files
 Group:               Applications/Internet
+BuildArch:           noarch
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-proxy-implementation = %{version}-%{release}
 Requires(pre):       shadow-utils
@@ -183,7 +185,7 @@ Requires(postun):    systemd
 Requires:            fping
 
 %description proxy
-The Zabbix proxy
+Zabbix proxy commmon files
 
 %package proxy-mysql
 Summary:             Zabbix proxy compiled to use MySQL
@@ -196,7 +198,7 @@ Requires(preun):     %{_sbindir}/alternatives
 Requires(postun):    %{_sbindir}/update-alternatives
 
 %description proxy-mysql
-The Zabbix proxy compiled to use MySQL
+Zabbix proxy compiled to use MySQL
 
 %package proxy-pgsql
 Summary:             Zabbix proxy compiled to use PostgreSQL
@@ -209,7 +211,7 @@ Requires(preun):     %{_sbindir}/alternatives
 Requires(postun):    %{_sbindir}/update-alternatives
 
 %description proxy-pgsql
-The Zabbix proxy compiled to use PostgreSQL
+Zabbix proxy compiled to use PostgreSQL
 
 %package proxy-sqlite3
 Summary:             Zabbix proxy compiled to use SQLite
@@ -222,7 +224,7 @@ Requires(preun):     %{_sbindir}/alternatives
 Requires(postun):    %{_sbindir}/update-alternatives
 
 %description proxy-sqlite3
-The Zabbix proxy compiled to use SQLite
+Zabbix proxy compiled to use SQLite
 
 %package web
 Summary:         Zabbix Web Frontend
@@ -303,9 +305,12 @@ rm -f frontends/php/include/.htaccess
 rm -f frontends/php/api/.htaccess
 rm -f frontends/php/conf/.htaccess
 
+# Fix path to traceroute utility
+find database -name 'data.sql' -exec sed -i 's|/usr/bin/traceroute|/bin/traceroute|' {} \;
+
 # Adapt configuration file options
 sed -i \
-    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbix/zabbix_agentd.pid|g' \
+    -e 's|# PidFile=.*|PidFile=/run/zabbix/zabbix_agentd.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|/usr/local||g' \
@@ -317,7 +322,7 @@ sed -i \
 
 #TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
-    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbixsrv/zabbix_server.pid|g' \
+    -e 's|# PidFile=.*|PidFile=/run/zabbixsrv/zabbix_server.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_server.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|# AlertScriptsPath=${datadir}/zabbix/|AlertScriptsPath=%{_sharedstatedir}/zabbixsrv/|g' \
@@ -330,7 +335,7 @@ sed -i \
 
 #TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
 sed -i \
-    -e 's|# PidFile=.*|PidFile=%{_localstatedir}/run/zabbixsrv/zabbix_proxy.pid|g' \
+    -e 's|# PidFile=.*|PidFile=/run/zabbixsrv/zabbix_proxy.pid|g' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_proxy.log|g' \
     -e 's|# LogFileSize=.*|LogFileSize=0|g' \
     -e 's|^DBUser=root|DBUser=zabbix|g' \
@@ -375,11 +380,13 @@ make %{?_smp_mflags}
 mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_sqlite3
 
 %configure $common_flags --with-mysql --enable-server
+make clean
 make %{?_smp_mflags}
 mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_mysql
 mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_mysql
 
 %configure $common_flags --with-postgresql --enable-server
+make clean
 make %{?_smp_mflags}
 mv src/zabbix_server/zabbix_server src/zabbix_server/zabbix_server_pgsql
 mv src/zabbix_proxy/zabbix_proxy src/zabbix_proxy/zabbix_proxy_pgsql
@@ -397,9 +404,15 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/httpd/conf.d
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/zabbix
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/zabbixsrv
-mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/zabbix
-mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/run/zabbixsrv
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
+
+# systemd tmpfiles
+mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d
+install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbix.conf
+install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
+mkdir -p %{buildroot}/run
+install -d -m 0755 %{buildroot}/run/zabbix/
+install -d -m 0755 %{buildroot}/run/zabbixsrv/
 
 # Frontend
 mkdir -p $RPM_BUILD_ROOT%{_datadir}
@@ -472,11 +485,6 @@ done
 
 install -dm 755 $RPM_BUILD_ROOT%{_datadir}/%{srcname}-sqlite3
 cp -p database/sqlite3/schema.sql $RPM_BUILD_ROOT%{_datadir}/%{srcname}-sqlite3
-
-# systemd must create /var/run/%{srcname}
-mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d
-install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbix.conf
-install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
 
 
 %post server
@@ -616,7 +624,6 @@ fi
 %dir %{_sysconfdir}/%{srcname}
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
 %{_bindir}/zabbix_get
 %{_bindir}/zabbix_sender
 %{_mandir}/man1/zabbix_get.1*
@@ -636,7 +643,8 @@ fi
 
 %files server
 %doc misc/snmptrap/zabbix_trap_receiver.pl
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
+%attr(0755,zabbixsrv,zabbixsrv) %dir /run/zabbixsrv/
+%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_server.conf
@@ -652,18 +660,17 @@ fi
 %{_mandir}/man8/zabbix_server.8*
 
 %files server-mysql
-%{_datadir}/%{srcname}-mysql
 %{_sbindir}/zabbix_server_mysql
 %{_unitdir}/zabbix-server-mysql.service
 
 %files server-pgsql
-%{_datadir}/%{srcname}-postgresql
 %{_sbindir}/zabbix_server_pgsql
 %{_unitdir}/zabbix-server-pgsql.service
 
 %files agent
 %doc conf/zabbix_agentd/*.conf
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbix.conf
+%attr(0755,zabbix,zabbix) %dir /run/zabbix/
+%{_prefix}/lib/tmpfiles.d/zabbix.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
 %config(noreplace) %{_sysconfdir}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agent.conf
@@ -678,8 +685,9 @@ fi
 
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
+%attr(0755,zabbixsrv,zabbixsrv) %dir /run/zabbixsrv/
+%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
-%config(noreplace) %{_sysconfdir}/tmpfiles.d/zabbixsrv.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/externalscripts
@@ -693,17 +701,14 @@ fi
 %{_mandir}/man8/zabbix_proxy.8*
 
 %files proxy-mysql
-%{_datadir}/%{srcname}-mysql
 %{_sbindir}/zabbix_proxy_mysql
 %{_unitdir}/zabbix-proxy-mysql.service
 
 %files proxy-pgsql
-%{_datadir}/%{srcname}-postgresql
 %{_sbindir}/zabbix_proxy_pgsql
 %{_unitdir}/zabbix-proxy-pgsql.service
 
 %files proxy-sqlite3
-%{_datadir}/%{srcname}-sqlite3
 %{_sbindir}/zabbix_proxy_sqlite3
 %{_unitdir}/zabbix-proxy-sqlite3.service
 
@@ -719,6 +724,18 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Sep  1 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.6-2
+- Install tmpfiles configuration in the proper location per guidelines,
+  thus solving the startup trouble due to missing directories
+  (respectively BZ 1115251, 1081584, 982001, 1135696)
+- Clean between builds, otherwise zabbix_{proxy,server} are compiled
+  again on install; make server and proxy package noarch now
+- Set the service type to forking in unit files (BZ 1132437),
+  add PIDFile entry, remove RemainAfterExit, change /var/run to /run
+- Correct path to traceroute in DB dumps again
+- Leave database-specific datadir subdirectories to the dbfiles sub-packages
+- Harmonize package descriptions and summaries
+
 * Wed Aug 27 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.6-1
 - New upstream release
 - Use the upstream tarball, now that non-free json was replaced with android-json

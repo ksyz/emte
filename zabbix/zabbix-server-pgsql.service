@@ -3,10 +3,10 @@ Description=Zabbix Server with PostgreSQL DB
 After=syslog.target network.target postgresql.service
 
 [Service]
-Type=oneshot
+Type=forking
 ExecStart=/usr/sbin/zabbix_server
-RemainAfterExit=yes
 User=zabbixsrv
+PIDFile=/run/zabbixsrv/zabbix_server.pid
 
 [Install]
 WantedBy=multi-user.target
