@@ -14,8 +14,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.2.6
-Release:        2%{?dist}
+Version:        2.4.0
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -37,12 +37,12 @@ Source16:       %{srcname}-fedora-epel.README
 Source17:        %{srcname}-tmpfiles-zabbixsrv.conf
 
 # local rules for config files
-Patch0:         %{srcname}-2.1.9-config.patch
+Patch0:         %{srcname}-2.4.0-config.patch
 # local rules for config files - fonts
 Patch1:         %{srcname}-2.0.3-fonts-config.patch
 # remove flash content (#737337)
 # https://support.zabbix.com/browse/ZBX-4794
-Patch2:         %{srcname}-2.0.1-no-flash.patch
+Patch2:         %{srcname}-2.4.0-no-flash.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
 
@@ -724,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Sep 11 2014 Volker Fröhlich <volker27@gmx.at> - 2.4.0-1
+- New major version release
+
 * Mon Sep  1 2014 Volker Fröhlich <volker27@gmx.at> - 2.2.6-2
 - Install tmpfiles configuration in the proper location per guidelines,
   thus solving the startup trouble due to missing directories
