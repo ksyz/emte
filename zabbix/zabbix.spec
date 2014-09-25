@@ -34,7 +34,7 @@ Source13:       %{srcname}-proxy-sqlite3.service
 Source14:       %{srcname}-server-mysql.service
 Source15:       %{srcname}-server-pgsql.service
 Source16:       %{srcname}-fedora-epel.README
-Source17:        %{srcname}-tmpfiles-zabbixsrv.conf
+Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 
 # local rules for config files
 Patch0:         %{srcname}-2.4.0-config.patch
