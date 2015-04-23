@@ -14,7 +14,7 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.4.4
+Version:        2.4.5
 Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -724,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Wed Apr 22 2015 Volker Fröhlich <volker27@gmx.at> - 2.4.5-1
+- New release
+
 * Tue Feb 24 2015 Volker Fröhlich <volker27@gmx.at> - 2.4.4-1
 - New release
 
