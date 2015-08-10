@@ -14,8 +14,8 @@
 %global srcname zabbix
 
 Name:           zabbix
-Version:        2.4.5
-Release:        2%{?dist}
+Version:        2.4.6
+Release:        1%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -724,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Aug 10 2015 Volker Fröhlich <volker27@gmx.at> - 2.4.6-1
+- New release
+
 * Fri Jun 19 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.4.5-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
 
