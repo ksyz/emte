@@ -15,7 +15,7 @@
 
 Name:           zabbix
 Version:        2.4.7
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -724,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.7-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
 * Thu Nov 12 2015 Volker Fröhlich <volker27@gmx.at> - 2.4.7-1
 - New release
 
