@@ -1,27 +1,22 @@
 # TODO, maybe sometime:
 # * Allow for nginx?
-# * F18 systemd macros, when EL6 reaches EOL
-# * Do something about mutex errors sometimes occurring when init scripts'
-#   restart is invoked; something like "sleep 2" between stop and start?
-#   "Include" statement in config files needs patching in order to not load
-#   various backup files (*.rpm{orig,new,save}, *~ etc) in that dir.
-#   https://support.zabbix.com/browse/ZBXNEXT-497
 # * Consider using systemd's ReadWriteDirectories
 
 #TODO: systemctl reload seems to be necessary after switching with Alternatives
 #TODO: If the DB path for a Sqlite proxy is configured wrong, it requires systemctl restart. Start doesn't work.
 
 %global srcname zabbix
+#%%global prerelease rc2
 
 Name:           zabbix
-Version:        2.4.7
-Release:        2%{?dist}
+Version:        3.0.1
+Release:        0%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com
-Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}.tar.gz
+Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}%{?prerelease:%{prerelease}}.tar.gz
 Source1:        %{srcname}-web.conf
 Source5:        %{srcname}-logrotate.in
 Source9:        %{srcname}-tmpfiles-zabbix.conf
@@ -36,13 +31,9 @@ Source15:       %{srcname}-server-pgsql.service
 Source16:       %{srcname}-fedora-epel.README
 Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 
+# This is not a symlink, because we don't want the webserver to possibly ever serve it.
 # local rules for config files
-Patch0:         %{srcname}-2.4.0-config.patch
-# local rules for config files - fonts
-Patch1:         %{srcname}-2.0.3-fonts-config.patch
-# remove flash content (#737337)
-# https://support.zabbix.com/browse/ZBX-4794
-Patch2:         %{srcname}-2.4.0-no-flash.patch
+Patch0:         %{srcname}-3.0.0-config.patch
 # adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
 Patch3:         %{srcname}-1.8.12-fping3.patch
 
@@ -51,6 +42,7 @@ BuildRequires:   postgresql-devel
 BuildRequires:   sqlite-devel
 BuildRequires:   net-snmp-devel
 BuildRequires:   openldap-devel
+BuildRequires:   openssl-devel
 BuildRequires:   gnutls-devel
 BuildRequires:   iksemel-devel
 BuildRequires:   unixODBC-devel
@@ -239,6 +231,14 @@ Requires:        php-ldap
 Requires:        php-mbstring
 Requires:        php-xml
 Requires:        php-gettext
+Requires:        web-assets-httpd
+# jquery 1.10.2 and jquery-ui 1.10.3 in the sources
+# jquery-ui's review is stalled, so we can't replace it:
+# https://bugzilla.redhat.com/show_bug.cgi?id=858027
+Requires:        js-jquery1 
+# prototype 1.6.1 in the sources
+#TODO: Das landet in /usr/share/prototype!
+#Requires:        prototype
 Requires:        dejavu-sans-fonts
 Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-web-database = %{version}-%{release}
@@ -271,15 +271,8 @@ Zabbix web frontend for PostgreSQL
 
 
 %prep
-%setup0 -q -n %{srcname}-%{version}
+%setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
 %patch0 -p1
-%patch1 -p1
-
-# Remove flash applet
-# https://support.zabbix.com/browse/ZBX-4794
-%patch2 -p1
-rm -f frontends/php/images/flash/zbxclock.swf
-
 %patch3 -p1
 
 # Remove bundled java libs
@@ -288,13 +281,10 @@ rm -rf src/zabbix_java/lib/*.jar
 # Remove prebuilt Windows binaries
 rm -rf bin
 
-# Remove included fonts
-rm -rf frontends/php/fonts
-
 # Remove executable permissions
 chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
-# Override statically named directory for alertscripts and externalscripts
+# Override creation of statically named directory for alertscripts and externalscripts
 # https://support.zabbix.com/browse/ZBX-6159
 sed -i 's|$(DESTDIR)@datadir@/zabbix|$(DESTDIR)/var/lib/zabbixsrv|' \
     src/zabbix_server/Makefile.in \
@@ -302,51 +292,49 @@ sed -i 's|$(DESTDIR)@datadir@/zabbix|$(DESTDIR)/var/lib/zabbixsrv|' \
 
 # Kill off .htaccess files, options set in SOURCE1
 rm -f frontends/php/include/.htaccess
-rm -f frontends/php/api/.htaccess
+rm -f frontends/php/app/.htaccess
 rm -f frontends/php/conf/.htaccess
 
 # Fix path to traceroute utility
 find database -name 'data.sql' -exec sed -i 's|/usr/bin/traceroute|/bin/traceroute|' {} \;
 
-# Adapt configuration file options
+
+# Common
+# Settings with hard-coded defaults that are not suitable for Fedora
+# are explicitly set, leaving the comment with the default value in place.
+# Settings without hard-coded defaults are simply replaced -- be they
+# comments or explicit settings!
+
+# Also replace the datadir placeholder that is not expanded, but effective
 sed -i \
-    -e 's|# PidFile=.*|PidFile=/run/zabbix/zabbix_agentd.pid|g' \
-    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|g' \
-    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
-    -e 's|/usr/local||g' \
+    -e '\|^# LogFileSize=.*|a LogFileSize=0' \
+    -e 's|^DBUser=root|DBUser=zabbix|' \
+    -e 's|^# DBSocket=/tmp/mysql.sock|# DBSocket=%{_sharedstatedir}/mysql/mysql.sock|' \
+    -e '\|^# ExternalScripts=\${datadir}/zabbix/externalscripts|a ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
+    -e '\|^# AlertScripts=\${datadir}/zabbix/alertscripts|a AlertScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
+    -e '\|^# TmpDir=\/tmp|a TmpDir=%{_sharedstatedir}/zabbixsrv/tmp' \
+    -e 's|/usr/local||' \
+    -e 's|\${datadir}|/usr/share|' \
+    conf/zabbix_agentd.conf conf/zabbix_proxy.conf conf/zabbix_server.conf
+
+# Specific
+sed -i \
+    -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbix/zabbix_agentd.pid' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|' \
     conf/zabbix_agentd.conf
 
 sed -i \
-    -e 's|/usr/local||g' \
-    conf/zabbix_agent.conf
-
-#TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
-sed -i \
-    -e 's|# PidFile=.*|PidFile=/run/zabbixsrv/zabbix_server.pid|g' \
-    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_server.log|g' \
-    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
-    -e 's|# AlertScriptsPath=${datadir}/zabbix/|AlertScriptsPath=%{_sharedstatedir}/zabbixsrv/|g' \
-    -e 's|^DBUser=root|DBUser=zabbix|g' \
-    -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
-    -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
-    -e 's|# TmpDir=\/tmp|TmpDir=%{_sharedstatedir}/zabbixsrv/tmp|' \
-    -e 's|/usr/local||g' \
-    conf/zabbix_server.conf
-
-#TODO: It'd be better to leave the defaults in a commment and just override them, as they are still hard-coded!
-sed -i \
-    -e 's|# PidFile=.*|PidFile=/run/zabbixsrv/zabbix_proxy.pid|g' \
-    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_proxy.log|g' \
-    -e 's|# LogFileSize=.*|LogFileSize=0|g' \
-    -e 's|^DBUser=root|DBUser=zabbix|g' \
-    -e 's|# DBSocket=/tmp/mysql.sock|DBSocket=%{_sharedstatedir}/mysql/mysql.sock|g' \
-    -e 's|# ExternalScripts=\${datadir}/zabbix/externalscripts|ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts|' \
-    -e 's|# TmpDir=\/tmp|TmpDir=%{_sharedstatedir}/zabbixsrv/tmp|' \
-    -e 's|/usr/local||g' \
+    -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbixsrv/zabbix_proxy.pid' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_proxy.log|' \
     conf/zabbix_proxy.conf
 
-#TODO: Ticket
+sed -i \
+    -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbixsrv/zabbix_server.pid' \
+    -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_server.log|' \
+    conf/zabbix_server.conf
+
 # Adapt man pages and SQL patches
+# These SQL files allow users to upgrade from 1.8
 sed -i 's|/usr/local||g;s| (if not modified during compile time).||' man/*.man
 sed -i 's|/usr/local||g' \
     upgrades/dbpatches/2.0/mysql/patch.sql \
@@ -368,6 +356,7 @@ common_flags="
     --with-ldap
     --with-libcurl
     --with-openipmi
+    --with-openssl
     --with-jabber
     --with-unixodbc
     --with-ssh2
@@ -410,9 +399,9 @@ mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d
 install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbix.conf
 install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
-mkdir -p %{buildroot}/run
-install -d -m 0755 %{buildroot}/run/zabbix/
-install -d -m 0755 %{buildroot}/run/zabbixsrv/
+mkdir -p $RPM_BUILD_ROOT%{_rundir}
+install -d -m 0755 $RPM_BUILD_ROOT%{_rundir}/zabbix/
+install -d -m 0755 $RPM_BUILD_ROOT%{_rundir}/zabbixsrv/
 
 # Frontend
 mkdir -p $RPM_BUILD_ROOT%{_datadir}
@@ -433,6 +422,17 @@ cp -a frontends/php $RPM_BUILD_ROOT%{_datadir}/%{srcname}
 # Prepare ghosted config file
 #TODO: Simplify that? Like /etc/zabbix_web/zabbix.conf.php?
 touch $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/zabbix.conf.php
+
+# Replace bundled font and JS libraries
+# There is no jquery-ui package yet
+rm frontends/php/fonts/DejaVuSans.ttf && ln -sf %{_datadir}/fonts/dejavu/DejaVuSans.ttf $RPM_BUILD_ROOT%{_datadir}/%{name}/fonts/DejaVuSans.ttf
+rm frontends/php/js/vendor/jquery.js && ln -sf %{_datadir}/web-assets/jquery/1/jquery.js $RPM_BUILD_ROOT%{_datadir}/%{name}/js/vendor/jquery.js 
+rm frontends/php/js/vendor/prototype.js && ln -sf %{_datadir}/prototype/prototype.js $RPM_BUILD_ROOT%{_datadir}/%{name}/js/vendor/prototype.js 
+
+# Move MVC override directory out; We are not owning or creating this directory!
+#TODO: README dort
+rm -r frontends/php/local/ && ln -sf %{_usr}/local/share/zabbix/local $RPM_BUILD_ROOT%{_datadir}/%{name}/local
+#TODO: local vielleicht doch unter /etc/zabbix/web?
 
 # This file is used to switch the frontend to maintenance mode
 mv $RPM_BUILD_ROOT%{_datadir}/%{srcname}/conf/maintenance.inc.php $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/maintenance.inc.php
@@ -462,7 +462,6 @@ touch $RPM_BUILD_ROOT%{_unitdir}/zabbix-proxy.service
 
 # Install compatibility links for config files
 #TODO: Switch to .wants files instead!
-ln -sf %{_sysconfdir}/zabbix_agent.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_agent.conf
 ln -sf %{_sysconfdir}/zabbix_agentd.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_agentd.conf
 ln -sf %{_sysconfdir}/zabbix_server.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_server.conf
 ln -sf %{_sysconfdir}/zabbix_proxy.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/zabbix_proxy.conf
@@ -643,7 +642,7 @@ fi
 
 %files server
 %doc misc/snmptrap/zabbix_trap_receiver.pl
-%attr(0755,zabbixsrv,zabbixsrv) %dir /run/zabbixsrv/
+%attr(0755,zabbixsrv,zabbixsrv) %dir %{_rundir}/zabbixsrv/
 %{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
@@ -669,23 +668,20 @@ fi
 
 %files agent
 %doc conf/zabbix_agentd/*.conf
-%attr(0755,zabbix,zabbix) %dir /run/zabbix/
+%attr(0755,zabbix,zabbix) %dir %{_rundir}/zabbix/
 %{_prefix}/lib/tmpfiles.d/zabbix.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
-%config(noreplace) %{_sysconfdir}/zabbix_agent.conf
-%config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agent.conf
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/zabbix-agent
 %attr(750,zabbix,zabbix) %dir %{_sharedstatedir}/zabbix
 %{_unitdir}/zabbix-agent.service
-%{_sbindir}/zabbix_agent
 %{_sbindir}/zabbix_agentd
 %{_mandir}/man8/zabbix_agentd.8*
 
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
-%attr(0755,zabbixsrv,zabbixsrv) %dir /run/zabbixsrv/
+%attr(0755,zabbixsrv,zabbixsrv) %dir %{_rundir}/zabbixsrv/
 %{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
@@ -724,6 +720,12 @@ fi
 %files web-pgsql
 
 %changelog
+* Tue Mar 29 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.1-1
+- Un-bundle jquery and prototype; remove the font patch and use a symlink instead
+- Add PHP configuration to Apache config file (BZ#1074292)
+- Fix the duplicate definition of a pidfile (BZ#1220392)
+- Change logrotate mode to truncate
+
 * Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.7-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
 

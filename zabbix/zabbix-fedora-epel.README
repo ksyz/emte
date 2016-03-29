@@ -20,12 +20,6 @@ Log files are located in /var/log/zabbix for the agent and /var/log/zabbixsrv.
 for server and proxy.
 
 
-==Where's my Flash watch?==
-
-It's not included in Fedora! Fedora's policy does not allow to include blobs:
-https://support.zabbix.com/browse/ZBX-4794
-
-
 ==No htaccess files==
 
 Fedora ships an Apache configuration file instead. This solutions performs
@@ -87,9 +81,10 @@ If you want to run multiple instances on the same host, do the following:
 
 ==Configuration changes==
 
-Zabbix 2.0/2.2 place configuration files directly in /etc. Symlinks preserve
+Zabbix 2.0 and later place configuration files directly in /etc. Symlinks preserve
 compatibility. maintenance.inc.php moved from /usr/share/zabbix/conf to
-/etc/zabbix/web.
+/etc/zabbix/web. Be careful not to replace the symlinks with files by mistake,
+as the agent will not pick them up!
 
 
 ==Media scripts and external scripts==
@@ -138,6 +133,26 @@ echo "avc:  denied  { name_connect } for  pid=20619 comm="httpd" dest=10051 scon
 If you're using ping from the frontend:
 
 echo "avc:  denied  { setpgid } for  pid=31880 comm="zabbix_server_p" scontext=system_u:system_r:zabbix_t:s0 tcontext=system_u:system_r:zabbix_t:s0 tclass=process" | audit2allow -M zabbix_ping_frontend; sudo semodule -i zabbix_ping_frontend.pp
+
+=Additional packaging changes in Fedora/EPEL since 3.0=
+
+==Configuration files contain the actual defaults==
+Previously, the defaults in the config file were replaced by settings that
+are suitable for Fedora. For non-mandatory settings, the daemon would default
+to the hardcoded setting though, which is confusing. To make this
+obvious, the original default settings are left in place and additional lines
+added instead.
+
+==Daemons are running in the foreground mode==
+Systemd is more happy with this and it also solves the problem for the pidfile
+setting, described in BZ #1220392. It is related to the above-mentioned.
+
+==Minimal PHP configuration==
+The httpd configuration contains the minimal settings necessary to operate
+the frontend. Please refer to the manual for details:
+https://www.zabbix.com/documentation/3.0/manual/installation/install
+
+Make sure to review these settings!
 
 
 =Additional packaging changes in Fedora/EPEL since 2.0=

@@ -3,10 +3,9 @@ Description=Zabbix SQLite3 Proxy
 After=syslog.target network.target
 
 [Service]
-Type=forking
-ExecStart=/usr/sbin/zabbix_proxy
+Type=simple
+ExecStart=/usr/sbin/zabbix_proxy -f
 User=zabbixsrv
-PIDFile=/run/zabbixsrv/zabbix_proxy.pid
 
 [Install]
 WantedBy=multi-user.target

@@ -3,6 +3,6 @@
 	monthly
 	notifempty
 	compress
-	create 0664 USER USER
+	copytruncate
 	su USER USER
 }
