@@ -34,8 +34,6 @@ Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 # This is not a symlink, because we don't want the webserver to possibly ever serve it.
 # local rules for config files
 Patch0:         %{srcname}-3.0.0-config.patch
-# adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
-Patch3:         %{srcname}-1.8.12-fping3.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -273,7 +271,6 @@ Zabbix web frontend for PostgreSQL
 %prep
 %setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
 %patch0 -p1
-%patch3 -p1
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -722,6 +719,7 @@ fi
 %changelog
 * Mon May 09 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.2-1
 - New upstream release
+- Remove now-obsolete fping3 patch
 
 * Tue Mar 29 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.1-1
 - Un-bundle jquery and prototype; remove the font patch and use a symlink instead
