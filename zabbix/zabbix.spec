@@ -9,7 +9,7 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.2
+Version:        3.0.3
 Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -717,6 +717,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Jul 04 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.3-1
+- New upstream release
+
 * Mon May 09 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.2-1
 - New upstream release
 - Remove now-obsolete fping3 patch
