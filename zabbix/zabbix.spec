@@ -10,7 +10,7 @@
 
 Name:           zabbix
 Version:        3.0.3
-Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -249,7 +249,7 @@ Summary:         Zabbix web frontend for MySQL
 Group:           Applications/Internet
 BuildArch:       noarch
 Requires:        %{name}-web = %{version}-%{release}
-Requires:        php-mysql
+Requires:        php-mysqli
 Provides:        %{name}-web-database = %{version}-%{release}
 Obsoletes:       %{name}-web <= 1.5.3-0.1
 
@@ -717,6 +717,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Jul 11 2016 Orion Poplawski <orion@cora.nwra.com> - 3.0.3-2
+- Fix php mysql requires
+
 * Mon Jul 04 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.3-1
 - New upstream release
 
