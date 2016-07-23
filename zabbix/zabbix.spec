@@ -9,8 +9,8 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.3
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Version:        3.0.4
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -717,6 +717,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Sat Jul 23 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.4-1
+- New upstream release
+
 * Mon Jul 11 2016 Orion Poplawski <orion@cora.nwra.com> - 3.0.3-2
 - Fix php mysql requires
 
