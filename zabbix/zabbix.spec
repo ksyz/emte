@@ -9,7 +9,7 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.5
+Version:        3.0.6
 Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -717,6 +717,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Dec 08 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.6-1
+- New upstream release
+
 * Wed Oct 05 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.5-1
 - New upstream release
 
