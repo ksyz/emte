@@ -9,8 +9,8 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.7
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Version:        3.0.9
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -717,6 +717,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Jun 23 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.9-1
+- New upstream release
+
 * Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.7-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
 
