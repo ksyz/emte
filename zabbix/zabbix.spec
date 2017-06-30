@@ -55,8 +55,9 @@ Provides:        bundled(md5-deutsch)
 # Could alternatively be conditional on Fedora/EL
 %if %{srcname} != %{name}
 Provides:        %{srcname} = %{version}-%{release}
-Conflicts:       %{srcname} < 2.2
+Conflicts:       %{srcname} < 3.0
 Conflicts:       %{srcname}20
+Conflicts:       %{srcname}22
 %else
 Obsoletes:       %{srcname}-docs < 1.8.15-2
 Obsoletes:       %{srcname}-web-sqlite3 < 2.0.3-3
