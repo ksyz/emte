@@ -422,13 +422,13 @@ touch $RPM_BUILD_ROOT%{_sysconfdir}/%{srcname}/web/zabbix.conf.php
 
 # Replace bundled font and JS libraries
 # There is no jquery-ui package yet
-rm frontends/php/fonts/DejaVuSans.ttf && ln -sf %{_datadir}/fonts/dejavu/DejaVuSans.ttf $RPM_BUILD_ROOT%{_datadir}/%{name}/fonts/DejaVuSans.ttf
-rm frontends/php/js/vendor/jquery.js && ln -sf %{_datadir}/web-assets/jquery/1/jquery.js $RPM_BUILD_ROOT%{_datadir}/%{name}/js/vendor/jquery.js 
-rm frontends/php/js/vendor/prototype.js && ln -sf %{_datadir}/prototype/prototype.js $RPM_BUILD_ROOT%{_datadir}/%{name}/js/vendor/prototype.js 
+rm frontends/php/fonts/DejaVuSans.ttf && ln -sf %{_datadir}/fonts/dejavu/DejaVuSans.ttf $RPM_BUILD_ROOT%{_datadir}/%{srcname}/fonts/DejaVuSans.ttf
+rm frontends/php/js/vendor/jquery.js && ln -sf %{_datadir}/web-assets/jquery/1/jquery.js $RPM_BUILD_ROOT%{_datadir}/%{srcname}/js/vendor/jquery.js 
+rm frontends/php/js/vendor/prototype.js && ln -sf %{_datadir}/prototype/prototype.js $RPM_BUILD_ROOT%{_datadir}/%{srcname}/js/vendor/prototype.js 
 
 # Move MVC override directory out; We are not owning or creating this directory!
 #TODO: README dort
-rm -r frontends/php/local/ && ln -sf %{_usr}/local/share/zabbix/local $RPM_BUILD_ROOT%{_datadir}/%{name}/local
+rm -r frontends/php/local/ && ln -sf %{_usr}/local/share/zabbix/local $RPM_BUILD_ROOT%{_datadir}/%{srcname}/local
 #TODO: local vielleicht doch unter /etc/zabbix/web?
 
 # This file is used to switch the frontend to maintenance mode
