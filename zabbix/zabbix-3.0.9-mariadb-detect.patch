@@ -1,0 +1,161 @@
+--- zabbix-3.0.9/configure	2017-07-13 15:25:48.791592554 -0700
++++ zabbix-3.0.9/configure.new	2017-07-13 15:26:29.292611158 -0700
+@@ -8046,18 +8046,12 @@
+             MYSQL_CFLAGS="`$MYSQL_CONFIG --cflags`"
+ 
+             _full_libmysql_libs="`$MYSQL_CONFIG --libs`"
++            _all_libmysql_libs=""
+ 
+             for i in $_full_libmysql_libs; do
+                 case $i in
+-                    -lmysqlclient)
+-                        _client_lib_name="mysqlclient"
+-                ;;
+-                    -lperconaserverclient)
+-                        _client_lib_name="perconaserverclient"
+-
+-                ;;
+-                    -lmariadbclient)
+-                        _client_lib_name="mariadbclient"
++                    -l*)
++                        _all_libmysql_libs="${_all_libmysql_libs} $i"
+                 ;;
+                     -L*)
+                         MYSQL_LDFLAGS="${MYSQL_LDFLAGS} $i"
+@@ -8065,29 +8059,36 @@
+                 esac
+             done
+ 
+-            if test "x$enable_static" = "xyes"; then
+-               for i in $_full_libmysql_libs; do
+-                   case $i in
+-           	      -lmysqlclient|-lperconaserverclient|-lmariadbclient)
+-           	    ;;
+-                      -l*)
+-				_lib_name="`echo "$i" | cut -b3-`"
+-				as_ac_Lib=`$as_echo "ac_cv_lib_$_lib_name''_main" | $as_tr_sh`
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -l$_lib_name" >&5
+-$as_echo_n "checking for main in -l$_lib_name... " >&6; }
++		_save_mysql_ldflags="${LDFLAGS}"
++		_save_mysql_cflags="${CFLAGS}"
++		LDFLAGS="${LDFLAGS} ${MYSQL_LDFLAGS}"
++		CFLAGS="${CFLAGS} ${MYSQL_CFLAGS}"
++
++		for i in $_all_libmysql_libs; do
++			_client_lib_name="`echo "$i" | cut -b3-`"
++			if test "x$enable_static" != "xyes"; then
++				as_ac_Lib=`$as_echo "ac_cv_lib_$_client_lib_name''_mysql_error" | $as_tr_sh`
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for mysql_error in -l$_client_lib_name" >&5
++$as_echo_n "checking for mysql_error in -l$_client_lib_name... " >&6; }
+ if eval \${$as_ac_Lib+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+   ac_check_lib_save_LIBS=$LIBS
+-LIBS="-l$_lib_name  $LIBS"
++LIBS="-l$_client_lib_name  $LIBS"
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char mysql_error ();
+ int
+ main ()
+ {
+-return main ();
++return mysql_error ();
+   ;
+   return 0;
+ }
+@@ -8106,29 +8107,14 @@
+ $as_echo "$ac_res" >&6; }
+ if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
+ 
+-						MYSQL_LIBS="$MYSQL_LIBS $i"
+-
+-else
+-
+-						as_fn_error $? "Not found $_lib_name library" "$LINENO" 5
++					MYSQL_LIBS="${i} ${MYSQL_LIBS}"
+ 
+ fi
+ 
+-                   ;;
+-                   esac
+-               done
+-            fi
+-
+-		_save_mysql_libs="${LIBS}"
+-		_save_mysql_ldflags="${LDFLAGS}"
+-		_save_mysql_cflags="${CFLAGS}"
+-		LIBS="${LIBS} ${MYSQL_LIBS}"
+-		LDFLAGS="${LDFLAGS} ${MYSQL_LDFLAGS}"
+-		CFLAGS="${CFLAGS} ${MYSQL_CFLAGS}"
+-
+-		as_ac_Lib=`$as_echo "ac_cv_lib_$_client_lib_name''_main" | $as_tr_sh`
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -l$_client_lib_name" >&5
+-$as_echo_n "checking for main in -l$_client_lib_name... " >&6; }
++			else
++				as_ac_Lib=`$as_echo "ac_cv_lib_$_client_lib_name''_mysql_error" | $as_tr_sh`
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for mysql_error in -l$_client_lib_name" >&5
++$as_echo_n "checking for mysql_error in -l$_client_lib_name... " >&6; }
+ if eval \${$as_ac_Lib+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+@@ -8137,11 +8123,17 @@
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-
++/* Override any GCC internal prototype to avoid an error.
++   Use char because int might match the return type of a GCC
++   builtin and then its argument prototype would still apply.  */
++#ifdef __cplusplus
++extern "C"
++#endif
++char mysql_error ();
+ int
+ main ()
+ {
+-return main ();
++return mysql_error ();
+   ;
+   return 0;
+ }
+@@ -8160,21 +8152,24 @@
+ $as_echo "$ac_res" >&6; }
+ if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
+ 
+-			MYSQL_LIBS="-l${_client_lib_name} ${MYSQL_LIBS}"
+-
+-else
+-
+-			as_fn_error $? "Not found mysqlclient library" "$LINENO" 5
++					MYSQL_LIBS="${_all_libmysql_libs} ${MYSQL_LIBS}"
+ 
+ fi
+ 
++			fi
++		done
++
++		if test -z "$MYSQL_LIBS"; then
++			as_fn_error $? "Could not find MySQL client library" "$LINENO" 5
++		fi
+ 
+-		LIBS="${_save_mysql_libs}"
+ 		LDFLAGS="${_save_mysql_ldflags}"
+ 		CFLAGS="${_save_mysql_cflags}"
+-		unset _save_mysql_libs
+ 		unset _save_mysql_ldflags
+ 		unset _save_mysql_cflags
++		unset _full_libmysql_libs
++		unset _all_libmysql_libs
++		unset _client_lib_name
+ 
+ 		MYSQL_VERSION=`$MYSQL_CONFIG --version`
+ 

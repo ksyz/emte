@@ -10,7 +10,7 @@
 
 Name:           zabbix
 Version:        3.0.9
-Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -34,6 +34,11 @@ Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 # This is not a symlink, because we don't want the webserver to possibly ever serve it.
 # local rules for config files
 Patch0:         %{srcname}-3.0.0-config.patch
+# Fix build with MariaDB 10.2+
+# See https://support.zabbix.com/browse/ZBX-12232 ; this is the patch
+# I submitted there, but applied to configure because running autoreconf
+# results in different paths in some build scripts, and breaks the build
+Patch1:         zabbix-3.0.9-mariadb-detect.patch
 
 BuildRequires:   mysql-devel
 BuildRequires:   postgresql-devel
@@ -272,6 +277,7 @@ Zabbix web frontend for PostgreSQL
 %prep
 %setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
 %patch0 -p1
+%patch1 -p1
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -718,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Jul 13 2017 Adam Williamson <awilliam@redhat.com> - 3.0.9-2
+- Fix build with MariaDB 10.2+
+
 * Fri Jun 23 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.9-1
 - New upstream release
 
