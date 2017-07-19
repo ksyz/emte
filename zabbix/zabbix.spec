@@ -9,8 +9,8 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.9
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Version:        3.0.10
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -724,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Wed Jul 19 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.10-1
+- New upstream release
+
 * Thu Jul 13 2017 Adam Williamson <awilliam@redhat.com> - 3.0.9-2
 - Fix build with MariaDB 10.2+
 
