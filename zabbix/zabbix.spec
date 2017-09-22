@@ -10,7 +10,7 @@
 
 Name:           zabbix
 Version:        3.0.10
-Release:        3%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        4%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -39,8 +39,11 @@ Patch0:         %{srcname}-3.0.0-config.patch
 # I submitted there, but applied to configure because running autoreconf
 # results in different paths in some build scripts, and breaks the build
 Patch1:         zabbix-3.0.9-mariadb-detect.patch
-
+%if 0%{?fedora} >= 28
+BuildRequires:   mariadb-connector-c-devel
+%else
 BuildRequires:   mysql-devel
+%endif
 BuildRequires:   postgresql-devel
 BuildRequires:   sqlite-devel
 BuildRequires:   net-snmp-devel
@@ -724,6 +727,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Sep 22 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.10-4
+- Replace mysql-devel with mariadb-connector-c-devel, resolves BZ #1493663
+
 * Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.10-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
 
