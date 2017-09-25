@@ -9,8 +9,8 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.10
-Release:        4%{?prerelease:.%{prerelease}.1}%{?dist}
+Version:        3.0.11
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 Group:          Applications/Internet
@@ -727,6 +727,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Sep 25 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.11-1
+- New upstream release
+
 * Fri Sep 22 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.10-4
 - Replace mysql-devel with mariadb-connector-c-devel, resolves BZ #1493663
 
