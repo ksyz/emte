@@ -727,7 +727,7 @@ fi
 %files web-pgsql
 
 %changelog
-* Thu Nov 11 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.13-1
+* Sat Nov 11 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.13-1
 - New upstream release
 
 * Wed Oct 18 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.12-1
