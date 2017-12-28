@@ -38,7 +38,6 @@ Patch0:         %{srcname}-3.0.0-config.patch
 # See https://support.zabbix.com/browse/ZBX-12232 ; this is the patch
 # I submitted there, but applied to configure because running autoreconf
 # results in different paths in some build scripts, and breaks the build
-Patch1:         zabbix-3.0.9-mariadb-detect.patch
 %if 0%{?fedora} >= 28
 BuildRequires:   mariadb-connector-c-devel
 %else
@@ -280,7 +279,6 @@ Zabbix web frontend for PostgreSQL
 %prep
 %setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
 %patch0 -p1
-%patch1 -p1
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -729,6 +727,7 @@ fi
 %changelog
 * Thu Dec 28 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.14-1
 - New upstream release
+- Remove mariadb-connector patch
 
 * Sat Nov 11 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.13-1
 - New upstream release
