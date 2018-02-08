@@ -10,10 +10,9 @@
 
 Name:           zabbix
 Version:        3.0.14
-Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
-Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://www.zabbix.com
 Source0:        http://downloads.sourceforge.net/%{srcname}/%{srcname}-%{version}%{?prerelease:%{prerelease}}.tar.gz
@@ -725,6 +724,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Feb 08 2018 Volker Fröhlich <volker27@gmx.at> - 3.0.14-2
+- Remove group keyword
+
 * Thu Dec 28 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.14-1
 - New upstream release
 - Remove mariadb-connector patch
