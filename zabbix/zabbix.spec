@@ -88,7 +88,6 @@ multitude of servers.
 
 %package dbfiles-mysql
 Summary:             Zabbix database schemas, images, data and patches
-Group:               Applications/Internet
 BuildArch:           noarch
 
 %description dbfiles-mysql
@@ -97,7 +96,6 @@ and/or updating MySQL databases
 
 %package dbfiles-pgsql
 Summary:             Zabbix database schemas, images, data and patches
-Group:               Applications/Internet
 BuildArch:           noarch
 
 %description dbfiles-pgsql
@@ -106,7 +104,6 @@ and/or updating PostgreSQL databases
 
 %package dbfiles-sqlite3
 Summary:             Zabbix database schemas and patches
-Group:               Applications/Internet
 BuildArch:           noarch
 
 %description dbfiles-sqlite3
@@ -115,7 +112,6 @@ and/or updating SQLite databases
 
 %package server
 Summary:             Zabbix server common files
-Group:               Applications/Internet
 BuildArch:           noarch
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-server-implementation = %{version}-%{release}
@@ -131,7 +127,6 @@ Zabbix server common files
 
 %package server-mysql
 Summary:             Zabbix server compiled to use MySQL
-Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-dbfiles-mysql
 Requires:            %{name}-server = %{version}-%{release}
@@ -145,7 +140,6 @@ Zabbix server compiled to use MySQL
 
 %package server-pgsql
 Summary:             Zabbix server compiled to use PostgreSQL
-Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-server = %{version}-%{release}
 Requires:            %{name}-dbfiles-pgsql
@@ -159,7 +153,6 @@ Zabbix server compiled to use PostgreSQL
 
 %package agent
 Summary:             Zabbix agent
-Group:               Applications/Internet
 Requires:            %{name} = %{version}-%{release}
 Requires(pre):       shadow-utils
 Requires(post):      systemd
@@ -171,7 +164,6 @@ Zabbix agent, to be installed on monitored systems
 
 %package proxy
 Summary:             Zabbix proxy common files
-Group:               Applications/Internet
 BuildArch:           noarch
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-proxy-implementation = %{version}-%{release}
@@ -186,7 +178,6 @@ Zabbix proxy commmon files
 
 %package proxy-mysql
 Summary:             Zabbix proxy compiled to use MySQL
-Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
 Requires:            %{name}-dbfiles-mysql
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
@@ -199,7 +190,6 @@ Zabbix proxy compiled to use MySQL
 
 %package proxy-pgsql
 Summary:             Zabbix proxy compiled to use PostgreSQL
-Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
 Requires:            %{name}-dbfiles-pgsql
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
@@ -212,7 +202,6 @@ Zabbix proxy compiled to use PostgreSQL
 
 %package proxy-sqlite3
 Summary:             Zabbix proxy compiled to use SQLite
-Group:               Applications/Internet
 Requires:            %{name}-proxy = %{version}-%{release}
 Requires:            %{name}-dbfiles-sqlite3
 Provides:            %{name}-proxy-implementation = %{version}-%{release}
@@ -225,7 +214,6 @@ Zabbix proxy compiled to use SQLite
 
 %package web
 Summary:         Zabbix Web Frontend
-Group:           Applications/Internet
 BuildArch:       noarch
 # Don't remove "php". Everything else only depends on php-common
 # and you'll end up with no module for Apache!
@@ -253,7 +241,6 @@ The php frontend to display the Zabbix web interface.
 
 %package web-mysql
 Summary:         Zabbix web frontend for MySQL
-Group:           Applications/Internet
 BuildArch:       noarch
 Requires:        %{name}-web = %{version}-%{release}
 Requires:        php-mysqli
@@ -265,7 +252,6 @@ Zabbix web frontend for MySQL
 
 %package web-pgsql
 Summary:         Zabbix web frontend for PostgreSQL
-Group:           Applications/Internet
 BuildArch:       noarch
 Requires:        %{name}-web = %{version}-%{release}
 Requires:        php-pgsql
