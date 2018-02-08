@@ -123,7 +123,6 @@ multitude of servers.
 
 %package devel
 Summary:			Zabbix header files
-Group:				Development/Libraries
 Requires:			%{name} = %{version}-%{release}
 BuildArch:			noarch
 
@@ -802,6 +801,12 @@ fi
 
 * Mon Jun 25 2018 Michal Ingeli <mi@v3.sk> - 3.0.16-1
 - New upstream relase 3.0.16
+
+* Thu Feb 08 2018 Volker Fröhlich <volker27@gmx.at> - 3.0.14-2
+- Remove group keyword
+
+* Thu Dec 28 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.14-1
+  Remove mariadb-connector patch
 
 * Mon Nov 20 2017 Michal Ingeli <mi@v3.sk> - 3.0.13-4
 - Adjusted LoadModulePath to %libdir/%srcname/
