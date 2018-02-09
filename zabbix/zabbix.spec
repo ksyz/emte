@@ -10,7 +10,7 @@
 
 Name:           zabbix
 Version:        3.0.14
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        3%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 License:        GPLv2+
@@ -710,6 +710,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.14-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
 * Thu Feb 08 2018 Volker Fröhlich <volker27@gmx.at> - 3.0.14-2
 - Remove group keyword
 
