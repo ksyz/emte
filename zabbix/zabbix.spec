@@ -10,7 +10,7 @@
 
 Name:           zabbix
 Version:        3.0.16
-Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 License:        GPLv2+
@@ -710,6 +710,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.16-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
 * Mon Apr 09 2018 Volker Froehlich <volker27@gmx.at> - 3.0.16-1
 - New upstream release
 
