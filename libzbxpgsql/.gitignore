@@ -1,0 +1,5 @@
+.*.sw?
+*.src.rpm
+noarch
+x86_64
+libzbxpgsql*66aa0d0*
