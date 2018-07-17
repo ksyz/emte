@@ -30,13 +30,49 @@ Source15:       %{srcname}-server-pgsql.service
 Source16:       %{srcname}-fedora-epel.README
 Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 
-# This is not a symlink, because we don't want the webserver to possibly ever serve it.
+Source9000:     README.zabbix-web-ro-database.txt
+
 # local rules for config files
-Patch0:         %{srcname}-3.0.0-config.patch
+Patch0:         %{srcname}-3.0.13-config.patch
+
+# local rules for config files - fonts
+Patch10:         %{srcname}-3.0.13-fonts-config.patch
+
+# * Remove fping3 options detection
+# 
+# adapt for fping3 - https://support.zabbix.com/browse/ZBX-4894
+# "zabbix tries to detect whether fping help output contains -I or -S flag (in that order)",
+# and the order ... changed. this patch hardcodes '-S' option
+# https://github.com/schweikert/fping/commit/66909a30c5a18fbee1078ff4ebd8b44c2b74b236
+# this is now fixed in zabbix get_source_ip_option(), which will continue 
+# to search for -S option, even after -I was found.
+# 
+# right now, this patch is applied on to skip flag detection altogether, 
+# because we dont need to detect stuff that don't change.
+Patch3:         %{srcname}-1.8.12-fping3.patch
+
+# * Adds proxy performance to API
+# 
+# this could be calculated from several API requests. this patch exposes 
+# stuff from Frontend UI to API.
+Patch4:          zabbix-3.0.13-api-proxyperf.patch
+
+# * Add R/O Frontend UI option
+# 
+# to be able to use zabbix on read/only database, we need to skip all 
+# change SQL queries (for now, only for mysql/mariadb). We still need 
+# to write some data for sessions, eferenced from users table and auditlog 
+# tables. Also, casual frontend browsing updates profile table, which we 
+# also skip, when RW database is defined.
+# add $DB['DATABASE_RW'] = 'whateber'; into standard config
+Patch9000:     %{srcname}-web-ro-database.patch
+Patch9001:     %{srcname}-3.0.13-web-ro-database.patch
+
 # Fix build with MariaDB 10.2+
 # See https://support.zabbix.com/browse/ZBX-12232 ; this is the patch
 # I submitted there, but applied to configure because running autoreconf
 # results in different paths in some build scripts, and breaks the build
+Patch1:         zabbix-3.0.13-mariadb-detect.patch
 %if 0%{?fedora} >= 28
 BuildRequires:   mariadb-connector-c-devel
 %else
@@ -48,7 +84,6 @@ BuildRequires:   net-snmp-devel
 BuildRequires:   openldap-devel
 BuildRequires:   openssl-devel
 BuildRequires:   gnutls-devel
-BuildRequires:   iksemel-devel
 BuildRequires:   unixODBC-devel
 BuildRequires:   curl-devel
 BuildRequires:   OpenIPMI-devel
@@ -86,6 +121,15 @@ play an important role in monitoring IT infrastructure. This is equally true
 for small organizations with a few servers and for large companies with a
 multitude of servers.
 
+%package devel
+Summary:			Zabbix header files
+Group:				Development/Libraries
+Requires:			%{name} = %{version}-%{release}
+BuildArch:			noarch
+
+%description devel
+Develompent files to build zabbix loadable modules
+
 %package dbfiles-mysql
 Summary:             Zabbix database schemas, images, data and patches
 BuildArch:           noarch
@@ -115,7 +159,7 @@ Summary:             Zabbix server common files
 BuildArch:           noarch
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-server-implementation = %{version}-%{release}
-Requires:            fping
+Requires:            fping >= 3
 Requires:            traceroute
 Requires(pre):       shadow-utils
 Requires(post):      systemd
@@ -126,7 +170,7 @@ Requires(postun):    systemd
 Zabbix server common files
 
 %package server-mysql
-Summary:             Zabbix server compiled to use MySQL
+Summary:             Zabbix server compiled to use MySQL/MariaDB
 Requires:            %{name} = %{version}-%{release}
 Requires:            %{name}-dbfiles-mysql
 Requires:            %{name}-server = %{version}-%{release}
@@ -171,7 +215,7 @@ Requires(pre):       shadow-utils
 Requires(post):      systemd
 Requires(preun):     systemd
 Requires(postun):    systemd
-Requires:            fping
+Requires:            fping >= 3
 
 %description proxy
 Zabbix proxy commmon files
@@ -233,6 +277,7 @@ Requires:        js-jquery1
 #TODO: Das landet in /usr/share/prototype!
 #Requires:        prototype
 Requires:        dejavu-sans-fonts
+Requires:		 dejavu-sans-mono-fonts
 Requires:        %{name} = %{version}-%{release}
 Requires:        %{name}-web-database = %{version}-%{release}
 
@@ -264,6 +309,10 @@ Zabbix web frontend for PostgreSQL
 %prep
 %setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
 %patch0 -p1
+%patch10 -p1
+# % patch1 -p1
+%patch4 -p1
+%patch9001 -p1
 
 # Remove bundled java libs
 rm -rf src/zabbix_java/lib/*.jar
@@ -271,19 +320,23 @@ rm -rf src/zabbix_java/lib/*.jar
 # Remove prebuilt Windows binaries
 rm -rf bin
 
+# Remove included fonts
+rm -rf frontends/php/fonts
+
 # Remove executable permissions
 chmod a-x upgrades/dbpatches/*/mysql/upgrade
 
-# Override creation of statically named directory for alertscripts and externalscripts
+# Override statically named directory for alertscripts and externalscripts
 # https://support.zabbix.com/browse/ZBX-6159
 sed -i 's|$(DESTDIR)@datadir@/zabbix|$(DESTDIR)/var/lib/zabbixsrv|' \
     src/zabbix_server/Makefile.in \
     src/zabbix_proxy/Makefile.in
 
 # Kill off .htaccess files, options set in SOURCE1
-rm -f frontends/php/include/.htaccess
-rm -f frontends/php/app/.htaccess
-rm -f frontends/php/conf/.htaccess
+find frontends/php -name .htaccess -a -delete
+
+# remove translation source files and scripts
+find frontends/php/locale \( -name '*.po' -o -name '*.sh' \) -a -delete
 
 # Fix path to traceroute utility
 find database -name 'data.sql' -exec sed -i 's|/usr/bin/traceroute|/bin/traceroute|' {} \;
@@ -311,16 +364,19 @@ sed -i \
 sed -i \
     -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbix/zabbix_agentd.pid' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbix/zabbix_agentd.log|' \
+    -e 's|LoadModulePath=.*|LoadModulePath=%{_libdir}/%{srcname}/agent/modules|g' \
     conf/zabbix_agentd.conf
 
 sed -i \
     -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbixsrv/zabbix_proxy.pid' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_proxy.log|' \
+    -e 's|LoadModulePath=.*|LoadModulePath=%{_libdir}/%{srcname}/server/modules|g' \
     conf/zabbix_proxy.conf
 
 sed -i \
     -e '\|^# PidFile=.*|a PidFile=%{_rundir}/zabbixsrv/zabbix_server.pid' \
     -e 's|^LogFile=.*|LogFile=%{_localstatedir}/log/zabbixsrv/zabbix_server.log|' \
+    -e 's|LoadModulePath=.*|LoadModulePath=%{_libdir}/%{srcname}/server/modules|g' \
     conf/zabbix_server.conf
 
 # Adapt man pages and SQL patches
@@ -332,6 +388,7 @@ sed -i 's|/usr/local||g' \
 
 # Install README file
 install -m 0644 -p %{SOURCE16} .
+install -m 0644 -p %{SOURCE9000} .
 
 
 %build
@@ -347,7 +404,6 @@ common_flags="
     --with-libcurl
     --with-openipmi
     --with-openssl
-    --with-jabber
     --with-unixodbc
     --with-ssh2
     --with-libxml2
@@ -474,6 +530,21 @@ done
 
 install -dm 755 $RPM_BUILD_ROOT%{_datadir}/%{srcname}-sqlite3
 cp -p database/sqlite3/schema.sql $RPM_BUILD_ROOT%{_datadir}/%{srcname}-sqlite3
+
+# Don't include include/config.h
+# * https://github.com/cavaliercoder/libzbxpgsql/issues/68#issuecomment-309274698
+# * https://support.zabbix.com/browse/ZBXNEXT-3157
+mkdir -p $RPM_BUILD_ROOT%{_includedir}/zabbix/
+mv include/config.h include/zbx_config.h
+# sed -i include/sysinc.h -e 's/"config.h"/"zbx_config.h"/g'
+install -m 644 include/*.h $RPM_BUILD_ROOT%{_includedir}/%{srcname}/
+
+install -m 755 -d $RPM_BUILD_ROOT%{_libdir}/%{srcname}/agent/modules
+install -m 755 -d $RPM_BUILD_ROOT%{_libdir}/%{srcname}/server/modules
+
+sed -e 's|^MODULES_DIR.*|MODULES_DIR = $(DESTDIR)/%{_libdir}/%{srcname}/agent/modules|g' -i src/zabbix_agent/Makefile.in
+sed -e 's|^MODULES_DIR.*|MODULES_DIR = $(DESTDIR)/%{_libdir}/%{srcname}/server/modules|g' -i src/zabbix_server/Makefile.in
+sed -e 's|^MODULES_DIR.*|MODULES_DIR = $(DESTDIR)/%{_libdir}/%{srcname}/server/modules|g' -i src/zabbix_proxy/Makefile.in
 
 
 %post server
@@ -609,7 +680,7 @@ fi
 
 
 %files
-%doc AUTHORS ChangeLog COPYING NEWS README zabbix-fedora-epel.README
+%doc AUTHORS ChangeLog COPYING NEWS README zabbix-fedora-epel.README README.zabbix-web-ro-database.txt
 %dir %{_sysconfdir}/%{srcname}
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
@@ -617,6 +688,9 @@ fi
 %{_bindir}/zabbix_sender
 %{_mandir}/man1/zabbix_get.1*
 %{_mandir}/man1/zabbix_sender.1*
+
+%files devel
+%{_includedir}/%{name}/
 
 %files dbfiles-mysql
 %doc COPYING
@@ -647,6 +721,7 @@ fi
 %attr(0750,zabbixsrv,zabbixsrv) %dir %{_sharedstatedir}/zabbixsrv/externalscripts
 %ghost %{_unitdir}/zabbix-server.service
 %{_mandir}/man8/zabbix_server.8*
+%{_libdir}/%{srcname}/server/modules
 
 %files server-mysql
 %{_sbindir}/zabbix_server_mysql
@@ -668,6 +743,7 @@ fi
 %{_unitdir}/zabbix-agent.service
 %{_sbindir}/zabbix_agentd
 %{_mandir}/man8/zabbix_agentd.8*
+%{_libdir}/%{srcname}/agent/modules
 
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
@@ -710,27 +786,37 @@ fi
 %files web-pgsql
 
 %changelog
-* Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.16-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+* Tue Jul 17 2018 Michal Ingeli <mi@v3.sk> - 3.0.16-2
+- Removed jabber media, due to lib iksemel EOL. May be re-enabled 
+  in the future.
+- Removed "group" tags.
 
-* Mon Apr 09 2018 Volker Froehlich <volker27@gmx.at> - 3.0.16-1
+* Mon Jun 25 2018 Michal Ingeli <mi@v3.sk> - 3.0.16-1
+- New upstream relase 3.0.16
+
+* Mon Nov 20 2017 Michal Ingeli <mi@v3.sk> - 3.0.13-4
+- Adjusted LoadModulePath to %libdir/%srcname/
+
+* Mon Nov 20 2017 Michal Ingeli <mi@v3.sk> - 3.0.13-3
+- Included config.h as zbx_config.h
+
+* Mon Nov 20 2017 Michal Ingeli <mi@v3.sk> - 3.0.13-2
 - New upstream release
+- Adjusted patches
+- Added Requireed zabbix version = BR
+- Don't include include/config.h in zabbix-devel
+  https://github.com/cavaliercoder/libzbxpgsql/issues/68#issuecomment-309274698
+  https://support.zabbix.com/browse/ZBXNEXT-3157
 
-* Tue Mar 20 2018 Volker Froehlich <volker27@gmx.at> - 3.0.15-1
+* Wed Nov 15 2017 Michal Ingeli <mi@v3.sk> - 3.0.12-1
 - New upstream release
+- merged spec file from fedora repository
 
-* Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.14-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+* Fri Nov 10 2017 Michal Ingeli <mi@v3.sk> - 3.0.7-5
+- Added devel package
 
-* Thu Feb 08 2018 Volker Fröhlich <volker27@gmx.at> - 3.0.14-2
-- Remove group keyword
-
-* Thu Dec 28 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.14-1
-- New upstream release
-- Remove mariadb-connector patch
-
-* Sat Nov 11 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.13-1
-- New upstream release
+* Wed Nov  8 2017 Michal Ingeli <mi@v3.sk> - 3.0.7-4
+- Fixed profile updates on R/O database
 
 * Wed Oct 18 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.12-1
 - New upstream release
@@ -750,23 +836,18 @@ fi
 * Wed Jul 19 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.10-1
 - New upstream release
 
-* Thu Jul 13 2017 Adam Williamson <awilliam@redhat.com> - 3.0.9-2
-- Fix build with MariaDB 10.2+
 
-* Fri Jun 23 2017 Volker Fröhlich <volker27@gmx.at> - 3.0.9-1
-- New upstream release
+* Tue Feb  7 2017 michal Ingeli <mi@v3.sk> - 3.0.7-3
+- Added patch option to run on MySQL/MariaDB R/O database e.g. replication slave
 
-* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 3.0.7-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+* Tue Feb  7 2017 michal Ingeli <mi@v3.sk> - 3.0.7-2
+- Added proxy performance patch
 
-* Wed Dec 21 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.7-1
-- New upstream release
+* Mon Feb  6 2017 michal Ingeli <mi@v3.sk> - 3.0.7-1
+- Version bump
 
-* Thu Dec 08 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.6-1
-- New upstream release
-
-* Wed Oct 05 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.5-1
-- New upstream release
+* Wed Sep  7 2016 michal Ingeli <mi@v3.sk> - 3.0.4-2
+- Backported/merged fedora SPEC file
 
 * Sat Jul 23 2016 Volker Fröhlich <volker27@gmx.at> - 3.0.4-1
 - New upstream release
@@ -787,8 +868,17 @@ fi
 - Fix the duplicate definition of a pidfile (BZ#1220392)
 - Change logrotate mode to truncate
 
-* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 2.4.7-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+* Tue Mar  1 2016 Michal Ingeli <mi@v3.sk> 3.0.1-1
+- New release
+
+* Thu Feb 18 2016 Michal Ingeli <mi@v3.sk> 3.0.0-1
+- New release
+- Removed zabbix_agent binary and configuration (inet service).
+- Added openssl BR
+- Added version check for fping >= 3
+- Backported removal of translation sources from upstream
+- Removed flash removals, as there is no flash anymore
+- Changed .htaccess clean-up to use search instead of direct entries
 
 * Thu Nov 12 2015 Volker Fröhlich <volker27@gmx.at> - 2.4.7-1
 - New release

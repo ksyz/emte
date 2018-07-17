@@ -1,0 +1,82 @@
+diff -rup zabbix-3.0.13-orig/frontends/php/app/controllers/CControllerProxyList.php zabbix-3.0.13/frontends/php/app/controllers/CControllerProxyList.php
+--- zabbix-3.0.13-orig/frontends/php/app/controllers/CControllerProxyList.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/app/controllers/CControllerProxyList.php	2017-11-16 13:38:11.116272775 +0100
+@@ -66,6 +66,7 @@ class CControllerProxyList extends CCont
+ 		$data['proxies'] = API::Proxy()->get([
+ 			'output' => ['proxyid', 'host', 'status', 'lastaccess', 'tls_connect', 'tls_accept'],
+ 			'selectHosts' => ['hostid', 'name', 'status'],
++			'selectPerf' => API_OUTPUT_EXTEND,
+ 			'sortfield' => $sortField,
+ 			'limit' => $config['search_limit'] + 1,
+ 			'editable' => true,
+@@ -88,7 +89,7 @@ class CControllerProxyList extends CCont
+ 		$proxyIds = array_keys($data['proxies']);
+ 
+ 		if ($proxyIds) {
+-			// calculate performance
++			/* // calculate performance
+ 			$dbPerformance = DBselect(
+ 				'SELECT h.proxy_hostid,SUM(1.0/i.delay) AS qps'.
+ 				' FROM hosts h,items i'.
+@@ -102,7 +103,7 @@ class CControllerProxyList extends CCont
+ 			);
+ 			while ($performance = DBfetch($dbPerformance)) {
+ 				$data['proxies'][$performance['proxy_hostid']]['perf'] = round($performance['qps'], 2);
+-			}
++			}*/
+ 
+ 			// get items
+ 			$items = API::Item()->get([
+diff -rup zabbix-3.0.13-orig/frontends/php/app/views/administration.proxy.list.php zabbix-3.0.13/frontends/php/app/views/administration.proxy.list.php
+--- zabbix-3.0.13-orig/frontends/php/app/views/administration.proxy.list.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/app/views/administration.proxy.list.php	2017-11-16 13:38:11.117272780 +0100
+@@ -123,9 +123,11 @@ foreach ($data['proxies'] as $proxy) {
+ 			: zbx_date2age($proxy['lastaccess']),
+ 		count($proxy['hosts']),
+ 		array_key_exists('item_count', $proxy) ? $proxy['item_count'] : 0,
+-		array_key_exists('perf', $proxy) ? $proxy['perf'] : '',
++		array_key_exists('perf', $proxy) ? $proxy['perf'] : '0',
+ 		$hosts ? $hosts : ''
+ 	]);
++
++	# var_dump($proxy);
+ }
+ 
+ // append table to form
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/api/services/CProxy.php zabbix-3.0.13/frontends/php/include/classes/api/services/CProxy.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/api/services/CProxy.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/api/services/CProxy.php	2017-11-16 13:38:11.118272786 +0100
+@@ -72,6 +72,7 @@ class CProxy extends CApiService {
+ 			'preservekeys'				=> null,
+ 			'selectHosts'				=> null,
+ 			'selectInterface'			=> null,
++			'selectPerf'				=> null,
+ 			'sortfield'					=> '',
+ 			'sortorder'					=> '',
+ 			'limit'						=> null
+@@ -596,7 +597,24 @@ class CProxy extends CApiService {
+ 				}
+ 			}
+ 		}
+-
++		
++		if ($options['selectPerf'] !== null && $options['selectPerf'] != API_OUTPUT_COUNT) {
++			// calculate performance
++			$dbPerformance = DBselect(
++				'SELECT h.proxy_hostid,SUM(1.0/i.delay) AS qps'.
++				' FROM hosts h,items i'.
++				' WHERE h.hostid=i.hostid'.
++					' AND h.status='.HOST_STATUS_MONITORED.
++					' AND i.status='.ITEM_STATUS_ACTIVE.
++					' AND i.delay<>0'.
++					' AND i.flags<>'.ZBX_FLAG_DISCOVERY_PROTOTYPE.
++					' AND '.dbConditionInt('h.proxy_hostid', $proxyIds).
++				' GROUP BY h.proxy_hostid'
++			);
++			while ($performance = DBfetch($dbPerformance)) {
++				$result[$performance['proxy_hostid']]['perf'] = round($performance['qps'], 2);
++			}
++		}
+ 		return $result;
+ 	}
+ 

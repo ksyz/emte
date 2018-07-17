@@ -1,0 +1,75 @@
+diff -ru zabbix-3.0.7/frontends/php/include/classes/core/CConfigFile.php zabbix-3.0.7-rorwdb/frontends/php/include/classes/core/CConfigFile.php
+--- zabbix-3.0.7/frontends/php/include/classes/core/CConfigFile.php	2017-03-21 13:53:10.102525001 +0100
++++ zabbix-3.0.7-rorwdb/frontends/php/include/classes/core/CConfigFile.php	2017-03-21 11:25:54.000000000 +0100
+@@ -113,6 +113,10 @@
+ 			$this->config['DB']['SCHEMA'] = $DB['SCHEMA'];
+ 		}
+ 
++		if (isset($DB['DATABASE_RW'])) {
++			$this->config['DB']['DATABASE_RW'] = $DB['DATABASE_RW'];
++		}
++
+ 		if (isset($ZBX_SERVER)) {
+ 			$this->config['ZBX_SERVER'] = $ZBX_SERVER;
+ 		}
+diff -ru zabbix-3.0.7/frontends/php/include/db.inc.php zabbix-3.0.7-rorwdb/frontends/php/include/db.inc.php
+--- zabbix-3.0.7/frontends/php/include/db.inc.php	2016-12-21 09:09:01.000000000 +0100
++++ zabbix-3.0.7-rorwdb/frontends/php/include/db.inc.php	2017-03-21 15:39:49.000000000 +0100
+@@ -51,6 +51,10 @@
+ 		switch ($DB['TYPE']) {
+ 			case ZBX_DB_MYSQL:
+ 				$DB['DB'] = @mysqli_connect($DB['SERVER'], $DB['USER'], $DB['PASSWORD'], $DB['DATABASE'], $DB['PORT']);
++				if ($DB['DATABASE_RW']) {
++					$DB['DB_RW'] = @mysqli_connect($DB['SERVER'], $DB['USER'], $DB['PASSWORD'], $DB['DATABASE_RW'], $DB['PORT']);
++				}
++
+ 				if (!$DB['DB']) {
+ 					$error = 'Error connecting to database: '.trim(mysqli_connect_error());
+ 					$result = false;
+@@ -389,6 +393,15 @@
+ 
+ 	switch ($DB['TYPE']) {
+ 		case ZBX_DB_MYSQL:
++			# echo "$query\n";
++			if (isset($DB['DB_RW']) && preg_match('/\b(sessions)\b/i', $query)) {
++				if (!$result = mysqli_query($DB['DB_RW'], $query)) {
++					error('Error in query ['.$query.'] ['.mysqli_error($DB['DB_RW']).']');
++				}
++
++				break;
++			}
++
+ 			if (!$result = mysqli_query($DB['DB'], $query)) {
+ 				error('Error in query ['.$query.'] ['.mysqli_error($DB['DB']).']');
+ 			}
+@@ -514,9 +527,30 @@
+ 
+ 	switch ($DB['TYPE']) {
+ 		case ZBX_DB_MYSQL:
++			# echo "$query\n";
++			if (isset($DB['DB_RW'])) {
++				if (preg_match('/\b(users|sessions|auditlog)\b/i', $query)) {
++					$sync_users_query = 'replace into zabbix_rw.users select * from zabbix.users where not userid in (select userid from zabbix_rw.users);';
++					if (!$result = mysqli_query($DB['DB_RW'], $sync_users_query)) {
++						error('Error in query - cannot sync users to RW DB ['.$sync_users_query.'] ['.mysqli_error($DB['DB_RW']).']');
++					}
++
++					if (!$result = mysqli_query($DB['DB_RW'], $query)) {
++						error('Error in query ['.$query.'] ['.mysqli_error($DB['DB_RW']).']');
++					}
++
++					break;
++				}
++
++				if (preg_match('/^(ROLLBACK|BEGIN|COMMIT|UPDATE|DELETE|INSERT)/i', $query)) {
++					return true;
++				}
++			}
++
+ 			if (!$result = mysqli_query($DB['DB'], $query)) {
+ 				error('Error in query ['.$query.'] ['.mysqli_error($DB['DB']).']');
+ 			}
++
+ 			break;
+ 		case ZBX_DB_POSTGRESQL:
+ 			if (!$result = (bool) pg_query($DB['DB'], $query)) {

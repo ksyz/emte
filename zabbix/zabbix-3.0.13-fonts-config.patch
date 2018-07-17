@@ -1,0 +1,12 @@
+diff -rup zabbix-3.0.13-orig/frontends/php/include/defines.inc.php zabbix-3.0.13/frontends/php/include/defines.inc.php
+--- zabbix-3.0.13-orig/frontends/php/include/defines.inc.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/defines.inc.php	2017-11-16 13:30:41.483660301 +0100
+@@ -41,7 +41,7 @@ define('ZBX_HISTORY_PERIOD', 86400);
+ 
+ define('ZBX_WIDGET_ROWS', 20);
+ 
+-define('ZBX_FONTPATH',				realpath('fonts')); // where to search for font (GD > 2.0.18)
++define('ZBX_FONTPATH',				'/usr/share/fonts/dejavu'); // where to search for font (GD > 2.0.18)
+ define('ZBX_GRAPH_FONT_NAME',		'DejaVuSans'); // font file name
+ define('ZBX_GRAPH_LEGEND_HEIGHT',	120); // when graph height is less then this value, some legend will not show up
+ 
