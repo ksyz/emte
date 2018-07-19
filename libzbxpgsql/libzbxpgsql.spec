@@ -1,13 +1,11 @@
 %global curdatetime %(date +%%Y%%m%%d%%H%%M%%S)
 
-# alexrj»
 %global commit0  66aa0d0f7e7e5658971dfcf6484557bc80831879
-# %global gittag0 GIT-TAG
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 
 Name:           libzbxpgsql
 Version:        1.1.0
-Release:        5.%{curdatetime}.%{shortcommit0}%{?dist}
+Release:        6.%{curdatetime}.%{shortcommit0}%{?dist}
 
 Summary:		Comprehensive monitoring of PostgreSQL servers via native Zabbix agent module
 
@@ -18,8 +16,8 @@ Source0:		https://github.com/cavaliercoder/libzbxpgsql/archive/%{commit0}.tar.gz
 
 BuildRequires:	libpqxx-devel
 BuildRequires:	rpm
-BuildRequires:	rpm-build
-BuildRequires:	rpmdevtools
+# BuildRequires:	rpm-build
+# BuildRequires:	rpmdevtools
 BuildRequires:	libtool
 BuildRequires:	postgresql-devel
 BuildRequires:	libconfig-devel
@@ -35,14 +33,13 @@ BuildRequires:	net-snmp-devel
 BuildRequires:	openldap-devel
 BuildRequires:	openssl-devel
 BuildRequires:	gnutls-devel
-BuildRequires:	iksemel-devel
+### BuildRequires:	iksemel-devel
 BuildRequires:	unixODBC-devel
 BuildRequires:	curl-devel
 BuildRequires:	OpenIPMI-devel
 BuildRequires:	libssh2-devel
 BuildRequires:	libxml2-devel
 
-# name%{?isa} >= %{?epoch:%{epoch}:}%{version}-%{release}'
 Requires:		zabbix-agent = %(eval "rpm -q zabbix-devel --qf '%%{version}-%%{release}'")
 
 %description
@@ -69,16 +66,20 @@ make %{?_smp_mflags}
 %make_install
 
 install -dm755 %{buildroot}%{_datadir}/%{name}
-install -m644 templates/*.xml %{buildroot}%{_datadir}/%{name}
-install -m644 conf/libzbxpgsql.conf %{buildroot}%{_sysconfdir}/zabbix/libzbxpgsql.conf
+install -m644 templates/*.xml %{buildroot}%{_datadir}/%{name}/
+install -m644 conf/libzbxpgsql.conf %{buildroot}%{_datadir}/%{name}/
 
 %files
-%doc README.md ChangeLog COPYING
+%doc README.md ChangeLog
+%license COPYING
 %{_libdir}/zabbix/agent/modules/*
 %{_datadir}/%{name}
-%{_sysconfdir}/zabbix/*
 
 %changelog
+* Wed Jul 18 2018 Michal Ingeli <mi@v3.sk> - 1.1.0-6
+- BR cleanup
+- datadir cleanup
+
 * Thu Nov 30 2017 Michal Ingeli <mi@v3.sk> - 1.1.0-5
 - Added stub/test configuration file
 
