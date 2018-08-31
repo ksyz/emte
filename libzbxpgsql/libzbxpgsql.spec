@@ -5,7 +5,7 @@
 
 Name:           libzbxpgsql
 Version:        1.1.0
-Release:        6.%{curdatetime}.%{shortcommit0}%{?dist}
+Release:        7.%{curdatetime}.%{shortcommit0}%{?dist}
 
 Summary:		Comprehensive monitoring of PostgreSQL servers via native Zabbix agent module
 
@@ -76,6 +76,9 @@ install -m644 conf/libzbxpgsql.conf %{buildroot}%{_datadir}/%{name}/
 %{_datadir}/%{name}
 
 %changelog
+* Mon Aug 13 2018 Michal Ingeli <mi@v3.sk> - 1.1.0-7
+- Rebuild with new ppostgresql
+
 * Wed Jul 18 2018 Michal Ingeli <mi@v3.sk> - 1.1.0-6
 - BR cleanup
 - datadir cleanup
