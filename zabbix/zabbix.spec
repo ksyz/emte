@@ -786,6 +786,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Sep  6 2018 Michal Ingeli <mi@v3.sk> - 3.0.21-1
+- New upstream release 3.0.21
+
 * Thu Aug 16 2018 Michal Ingeli <mi@v3.sk> - 3.0.20-1
 - New upstream release 3.0.20
 
