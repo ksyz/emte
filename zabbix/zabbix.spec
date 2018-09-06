@@ -73,12 +73,19 @@ Patch9001:     %{srcname}-3.0.13-web-ro-database.patch
 # I submitted there, but applied to configure because running autoreconf
 # results in different paths in some build scripts, and breaks the build
 Patch1:         zabbix-3.0.13-mariadb-detect.patch
+
 %if 0%{?fedora} >= 28
 BuildRequires:   mariadb-connector-c-devel
 %else
 BuildRequires:   mysql-devel
 %endif
+
+%if 0{?fedora} >= 29
+BuildRequires:   libpq-devel
+%else
 BuildRequires:   postgresql-devel
+%endif
+
 BuildRequires:   sqlite-devel
 BuildRequires:   net-snmp-devel
 BuildRequires:   openldap-devel
@@ -90,6 +97,7 @@ BuildRequires:   OpenIPMI-devel
 BuildRequires:   libssh2-devel
 BuildRequires:   libxml2-devel
 BuildRequires:   systemd
+BuildRequires:   gcc
 
 Requires:        logrotate
 Provides:        bundled(md5-deutsch)
@@ -787,6 +795,7 @@ fi
 %changelog
 * Thu Sep  6 2018 Michal Ingeli <mi@v3.sk> - 3.0.21-1
 - New upstream release 3.0.21
+- Added BR gcc
 
 * Thu Aug 16 2018 Michal Ingeli <mi@v3.sk> - 3.0.20-1
 - New upstream release 3.0.20
