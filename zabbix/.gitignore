@@ -2,5 +2,5 @@
 *.src.rpm
 noarch
 x86_64
-zabbix-3.0.16.tar.gz
-zabbix-3.0.16
+zabbix-3.0.*.tar.gz
+zabbix-3.0.*
