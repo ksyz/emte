@@ -9,8 +9,8 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.16
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Version:        3.0.20
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 License:        GPLv2+
@@ -786,6 +786,12 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Aug 16 2018 Michal Ingeli <mi@v3.sk> - 3.0.20-1
+- New upstream release 3.0.20
+
+* Thu Jul 19 2018 Michal Ingeli <mi@v3.sk> - 3.0.19-1
+- New upstream release 3.0.19
+
 * Tue Jul 17 2018 Michal Ingeli <mi@v3.sk> - 3.0.16-2
 - Removed jabber media, due to lib iksemel EOL. May be re-enabled 
   in the future.
