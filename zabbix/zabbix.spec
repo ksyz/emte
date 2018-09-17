@@ -9,7 +9,7 @@
 #%%global prerelease rc2
 
 Name:           zabbix
-Version:        3.0.21
+Version:        3.0.22
 Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
@@ -80,7 +80,7 @@ BuildRequires:   mariadb-connector-c-devel
 BuildRequires:   mysql-devel
 %endif
 
-%if 0{?fedora} >= 29
+%if 0%{?fedora} >= 29
 BuildRequires:   libpq-devel
 %else
 BuildRequires:   postgresql-devel
@@ -793,6 +793,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Sep 17 2018 Michal Ingeli <mi@v3.sk> - 3.0.22-1
+- New upstream release 3.0.22
+
 * Thu Sep  6 2018 Michal Ingeli <mi@v3.sk> - 3.0.21-1
 - New upstream release 3.0.21
 - Added BR gcc
