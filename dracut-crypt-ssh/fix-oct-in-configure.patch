@@ -1,0 +1,19 @@
+diff --git a/configure b/configure
+index 1c283a1..e32abff 100755
+--- a/configure
++++ b/configure
+@@ -34,12 +34,12 @@ else
+ fi
+ 
+ echo -n "Checking dracut version... "
+-DRACUT_VERSION=$(${DRACUT} --help | egrep "Version:[ \t]+[0-9]+" | egrep -o [0-9]+)
++DRACUT_VERSION=$(${DRACUT} --help | egrep "Version:[ \t]+[0-9]+" | egrep -o [1-9][0-9]+)
+ if [[ $? -ne 0 ]]; then
+ 	echo -n "[old version - fallback] "
+ 	DRACUT_VERSION=004
+ else
+-	DRACUT_VERSION=$(echo ${DRACUT_VERSION} | cut -f 1 -d " ")
++	DRACUT_VERSION=$(echo ${DRACUT_VERSION} | cut -f 1 -d " " | sed -e 's/^00*//g' )
+ fi
+ echo ${DRACUT_VERSION}
+ 
