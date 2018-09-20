@@ -1,0 +1,100 @@
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/core/CConfigFile.php zabbix-3.0.13/frontends/php/include/classes/core/CConfigFile.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/core/CConfigFile.php	2017-11-16 13:38:58.603548687 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/core/CConfigFile.php	2017-11-16 13:39:21.849683753 +0100
+@@ -114,6 +114,10 @@ class CConfigFile {
+ 			$this->config['DB']['SCHEMA'] = $DB['SCHEMA'];
+ 		}
+ 
++		if (isset($DB['DATABASE_RW'])) {
++			$this->config['DB']['DATABASE_RW'] = $DB['DATABASE_RW'];
++		}
++
+ 		if (isset($ZBX_SERVER)) {
+ 			$this->config['ZBX_SERVER'] = $ZBX_SERVER;
+ 		}
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/user/CProfile.php zabbix-3.0.13/frontends/php/include/classes/user/CProfile.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/user/CProfile.php	2017-11-09 12:33:29.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/user/CProfile.php	2017-11-16 13:39:21.884683956 +0100
+@@ -41,6 +41,9 @@ class CProfile {
+ 	 * @return bool
+ 	 */
+ 	public static function isModified() {
++		global $DB;
++		if ($DB['DB_RW'])
++			return false;
+ 		return (self::$insert || self::$update);
+ 	}
+ 
+diff -rup zabbix-3.0.13-orig/frontends/php/include/db.inc.php zabbix-3.0.13/frontends/php/include/db.inc.php
+--- zabbix-3.0.13-orig/frontends/php/include/db.inc.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/db.inc.php	2017-11-16 13:59:29.780825680 +0100
+@@ -51,6 +51,10 @@ function DBconnect(&$error) {
+ 		switch ($DB['TYPE']) {
+ 			case ZBX_DB_MYSQL:
+ 				$DB['DB'] = @mysqli_connect($DB['SERVER'], $DB['USER'], $DB['PASSWORD'], $DB['DATABASE'], $DB['PORT']);
++				if ($DB['DATABASE_RW']) {
++					$DB['DB_RW'] = @mysqli_connect($DB['SERVER'], $DB['USER'], $DB['PASSWORD'], $DB['DATABASE_RW'], $DB['PORT']);
++				}
++
+ 				if (!$DB['DB']) {
+ 					$error = 'Error connecting to database: '.trim(mysqli_connect_error());
+ 					$result = false;
+@@ -209,6 +213,10 @@ function DBclose() {
+ 	if (isset($DB['DB']) && !empty($DB['DB'])) {
+ 		switch ($DB['TYPE']) {
+ 			case ZBX_DB_MYSQL:
++				if (isset($DB['DB_RW']) && !empty($DB['DB_RE'])) {
++					mysqli_close($DB['DB_RW']);
++				}
++
+ 				$result = mysqli_close($DB['DB']);
+ 				break;
+ 			case ZBX_DB_POSTGRESQL:
+@@ -393,6 +401,14 @@ function DBselect($query, $limit = null,
+ 
+ 	switch ($DB['TYPE']) {
+ 		case ZBX_DB_MYSQL:
++			if (isset($DB['DB_RW']) && preg_match('/FROM\s*\bsessions\b/i', $query)) {
++				if (!$result = mysqli_query($DB['DB_RW'], $query)) {
++					error('Error in RW query ['.$query.'] ['.mysqli_error($DB['DB_RW']).']');
++				}
++
++				break;
++			}
++
+ 			if (!$result = mysqli_query($DB['DB'], $query)) {
+ 				error('Error in query ['.$query.'] ['.mysqli_error($DB['DB']).']', 'sql');
+ 			}
+@@ -520,6 +536,32 @@ function DBexecute($query, $skip_error_m
+ 
+ 	switch ($DB['TYPE']) {
+ 		case ZBX_DB_MYSQL:
++			if (isset($DB['DB_RW'])) {
++				if (preg_match('/\b(users|sessions|auditlog|idx|profiles)\b/i', $query)) {
++					$sync_users_query = 'replace into '.$DB['DATABASE_RW'].'.users 
++						select * from zabbix.users where not userid in 
++						(select userid from '.$DB['DATABASE_RW'].'.users);';
++
++					# prior, we sync users
++					if (!$result = mysqli_query($DB['DB_RW'], $sync_users_query)) {
++						error('Error in RW query - cannot sync users to RW DB ['.
++							$sync_users_query.'] ['.mysqli_error($DB['DB_RW']).']');
++					}
++
++					# now a standard query
++					if (!$result = mysqli_query($DB['DB_RW'], $query)) {
++						error('Error RW in query ['.$query.'] ['.mysqli_error($DB['DB_RW']).']');
++					}
++				}
++				else {
++					# don't really care about other data modifications
++					# profile updates have to be accounted for, via CProfile::isModified
++					$result = true;
++				}
++
++				break;
++			}
++
+ 			if (!$result = mysqli_query($DB['DB'], $query)) {
+ 				error('Error in query ['.$query.'] ['.mysqli_error($DB['DB']).']', 'sql');
+ 			}

@@ -1,0 +1,66 @@
+diff --git a/frontends/php/include/classes/core/CConfigFile.php b/frontends/php/include/classes/core/CConfigFile.php
+index 815c76d..7b9c1fe 100644
+--- a/frontends/php/include/classes/core/CConfigFile.php
++++ b/frontends/php/include/classes/core/CConfigFile.php
+@@ -24,7 +24,7 @@ class CConfigFile {
+ 	const CONFIG_NOT_FOUND = 1;
+ 	const CONFIG_ERROR = 2;
+ 
+-	const CONFIG_FILE_PATH = '/conf/zabbix.conf.php';
++	const CONFIG_FILE_PATH = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ 	private static $supported_db_types = [
+ 		ZBX_DB_DB2 => true,
+diff --git a/frontends/php/include/classes/core/ZBase.php b/frontends/php/include/classes/core/ZBase.php
+index f8b45e3..5e5c04e 100644
+--- a/frontends/php/include/classes/core/ZBase.php
++++ b/frontends/php/include/classes/core/ZBase.php
+@@ -104,7 +104,7 @@ class ZBase {
+ 		require_once $this->getRootDir().'/include/ident.inc.php';
+ 		require_once $this->getRootDir().'/include/images.inc.php';
+ 		require_once $this->getRootDir().'/include/items.inc.php';
+-		require_once $this->getRootDir().'/include/maintenances.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 		require_once $this->getRootDir().'/include/maps.inc.php';
+ 		require_once $this->getRootDir().'/include/media.inc.php';
+ 		require_once $this->getRootDir().'/include/services.inc.php';
+@@ -283,7 +283,7 @@ class ZBase {
+ 	 * @throws Exception
+ 	 */
+ 	protected function setMaintenanceMode() {
+-		require_once $this->getRootDir().'/conf/maintenance.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 
+ 		if (defined('ZBX_DENY_GUI_ACCESS')) {
+ 			$user_ip = (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+@@ -299,7 +299,7 @@ class ZBase {
+ 	 * Load zabbix config file.
+ 	 */
+ 	protected function loadConfigFile() {
+-		$configFile = $this->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$configFile = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($configFile);
+ 		$this->config = $config->load();
+ 	}
+diff --git a/frontends/php/include/classes/setup/CSetupWizard.php b/frontends/php/include/classes/setup/CSetupWizard.php
+index 9fc8094..c6419be 100644
+--- a/frontends/php/include/classes/setup/CSetupWizard.php
++++ b/frontends/php/include/classes/setup/CSetupWizard.php
+@@ -348,7 +348,7 @@ class CSetupWizard extends CForm {
+ 	function stage5() {
+ 		$this->setConfig('ZBX_CONFIG_FILE_CORRECT', true);
+ 
+-		$config_file_name = Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$config_file_name = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($config_file_name);
+ 		$config->config = [
+ 			'DB' => [
+@@ -517,7 +517,7 @@ class CSetupWizard extends CForm {
+ 				// make zabbix.conf.php downloadable
+ 				header('Content-Type: application/x-httpd-php');
+ 				header('Content-Disposition: attachment; filename="'.basename(CConfigFile::CONFIG_FILE_PATH).'"');
+-				$config = new CConfigFile(Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH);
++				$config = new CConfigFile(CConfigFile::CONFIG_FILE_PATH);
+ 				$config->config = [
+ 					'DB' => [
+ 						'TYPE' => $this->getConfig('DB_TYPE'),

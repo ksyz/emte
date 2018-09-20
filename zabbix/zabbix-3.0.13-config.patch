@@ -1,0 +1,488 @@
+diff -rup zabbix-3.0.13-orig/conf/zabbix_agentd.conf zabbix-3.0.13/conf/zabbix_agentd.conf
+--- zabbix-3.0.13-orig/conf/zabbix_agentd.conf	2017-11-09 12:33:27.000000000 +0100
++++ zabbix-3.0.13/conf/zabbix_agentd.conf	2017-11-16 10:41:35.640006876 +0100
+@@ -9,6 +9,7 @@
+ # Mandatory: no
+ # Default:
+ # PidFile=/tmp/zabbix_agentd.pid
++PidFile=/run/zabbix/zabbix_agentd.pid
+ 
+ ### Option: LogType
+ #	Specifies where log messages are written to:
+@@ -27,7 +28,7 @@
+ # Default:
+ # LogFile=
+ 
+-LogFile=/tmp/zabbix_agentd.log
++LogFile=/var/log/zabbix/zabbix_agentd.log
+ 
+ ### Option: LogFileSize
+ #	Maximum size of log file in MB.
+@@ -37,6 +38,7 @@ LogFile=/tmp/zabbix_agentd.log
+ # Range: 0-1024
+ # Default:
+ # LogFileSize=1
++LogFileSize=0
+ 
+ ### Option: DebugLevel
+ #	Specifies debug level:
+@@ -252,15 +254,15 @@ Hostname=Zabbix server
+ 
+ ### Option: Include
+ #	You may include individual files or all files in a directory in the configuration file.
+-#	Installing Zabbix will create include directory in /usr/local/etc, unless modified during the compile time.
++#	Installing Zabbix will create include directory in /etc, unless modified during the compile time.
+ #
+ # Mandatory: no
+ # Default:
+ # Include=
+ 
+-# Include=/usr/local/etc/zabbix_agentd.userparams.conf
+-# Include=/usr/local/etc/zabbix_agentd.conf.d/
+-# Include=/usr/local/etc/zabbix_agentd.conf.d/*.conf
++# Include=/etc/zabbix_agentd.userparams.conf
++# Include=/etc/zabbix_agentd.conf.d/
++# Include=/etc/zabbix_agentd.conf.d/*.conf
+ 
+ ####### USER-DEFINED MONITORED PARAMETERS #######
+ 
+diff -rup zabbix-3.0.13-orig/conf/zabbix_proxy.conf zabbix-3.0.13/conf/zabbix_proxy.conf
+--- zabbix-3.0.13-orig/conf/zabbix_proxy.conf	2017-11-09 12:33:27.000000000 +0100
++++ zabbix-3.0.13/conf/zabbix_proxy.conf	2017-11-16 10:41:35.642006880 +0100
+@@ -82,7 +82,7 @@ Hostname=Zabbix proxy
+ # Default:
+ # LogFile=
+ 
+-LogFile=/tmp/zabbix_proxy.log
++LogFile=/var/log/zabbixsrv/zabbix_proxy.log
+ 
+ ### Option: LogFileSize
+ #	Maximum size of log file in MB.
+@@ -92,6 +92,7 @@ LogFile=/tmp/zabbix_proxy.log
+ # Range: 0-1024
+ # Default:
+ # LogFileSize=1
++LogFileSize=0
+ 
+ ### Option: DebugLevel
+ #	Specifies debug level:
+@@ -113,6 +114,7 @@ LogFile=/tmp/zabbix_proxy.log
+ # Mandatory: no
+ # Default:
+ # PidFile=/tmp/zabbix_proxy.pid
++PidFile=/run/zabbixsrv/zabbix_proxy.pid
+ 
+ ### Option: DBHost
+ #	Database host name.
+@@ -162,7 +164,7 @@ DBUser=zabbix
+ #
+ # Mandatory: no
+ # Default:
+-# DBSocket=/tmp/mysql.sock
++# DBSocket=/var/lib/mysql/mysql.sock
+ 
+ # Option: DBPort
+ #	Database port when not using local socket. Ignored for SQLite.
+@@ -469,7 +471,8 @@ Timeout=4
+ #
+ # Mandatory: no
+ # Default:
+-# ExternalScripts=${datadir}/zabbix/externalscripts
++# ExternalScripts=/usr/share/zabbix/externalscripts
++ExternalScripts=/var/lib/zabbixsrv/externalscripts
+ 
+ ### Option: FpingLocation
+ #	Location of fping.
+@@ -513,6 +516,7 @@ LogSlowQueries=3000
+ # Mandatory: no
+ # Default:
+ # TmpDir=/tmp
++TmpDir=/var/lib/zabbixsrv/tmp
+ 
+ ### Option: AllowRoot
+ #	Allow the proxy to run as 'root'. If disabled and the proxy is started by 'root', the proxy
+@@ -535,15 +539,15 @@ LogSlowQueries=3000
+ 
+ ### Option: Include
+ #	You may include individual files or all files in a directory in the configuration file.
+-#	Installing Zabbix will create include directory in /usr/local/etc, unless modified during the compile time.
++#	Installing Zabbix will create include directory in /etc, unless modified during the compile time.
+ #
+ # Mandatory: no
+ # Default:
+ # Include=
+ 
+-# Include=/usr/local/etc/zabbix_proxy.general.conf
+-# Include=/usr/local/etc/zabbix_proxy.conf.d/
+-# Include=/usr/local/etc/zabbix_proxy.conf.d/*.conf
++# Include=/etc/zabbix_proxy.general.conf
++# Include=/etc/zabbix_proxy.conf.d/
++# Include=/etc/zabbix_proxy.conf.d/*.conf
+ 
+ ### Option: SSLCertLocation
+ #	Location of SSL client certificates.
+@@ -551,7 +555,7 @@ LogSlowQueries=3000
+ #
+ # Mandatory: no
+ # Default:
+-# SSLCertLocation=${datadir}/zabbix/ssl/certs
++# SSLCertLocation=/usr/share/zabbix/ssl/certs
+ 
+ ### Option: SSLKeyLocation
+ #	Location of private keys for SSL client certificates.
+@@ -559,7 +563,7 @@ LogSlowQueries=3000
+ #
+ # Mandatory: no
+ # Default:
+-# SSLKeyLocation=${datadir}/zabbix/ssl/keys
++# SSLKeyLocation=/usr/share/zabbix/ssl/keys
+ 
+ ### Option: SSLCALocation
+ #	Location of certificate authority (CA) files for SSL server certificate verification.
+diff -rup zabbix-3.0.13-orig/conf/zabbix_server.conf zabbix-3.0.13/conf/zabbix_server.conf
+--- zabbix-3.0.13-orig/conf/zabbix_server.conf	2017-11-09 12:33:27.000000000 +0100
++++ zabbix-3.0.13/conf/zabbix_server.conf	2017-11-16 10:41:35.644006885 +0100
+@@ -35,7 +35,7 @@
+ # Default:
+ # LogFile=
+ 
+-LogFile=/tmp/zabbix_server.log
++LogFile=/var/log/zabbixsrv/zabbix_server.log
+ 
+ ### Option: LogFileSize
+ #	Maximum size of log file in MB.
+@@ -45,6 +45,7 @@ LogFile=/tmp/zabbix_server.log
+ # Range: 0-1024
+ # Default:
+ # LogFileSize=1
++LogFileSize=0
+ 
+ ### Option: DebugLevel
+ #	Specifies debug level:
+@@ -66,6 +67,7 @@ LogFile=/tmp/zabbix_server.log
+ # Mandatory: no
+ # Default:
+ # PidFile=/tmp/zabbix_server.pid
++PidFile=/run/zabbixsrv/zabbix_server.pid
+ 
+ ### Option: DBHost
+ #	Database host name.
+@@ -115,7 +117,7 @@ DBUser=zabbix
+ #
+ # Mandatory: no
+ # Default:
+-# DBSocket=/tmp/mysql.sock
++# DBSocket=/var/lib/mysql/mysql.sock
+ 
+ ### Option: DBPort
+ #	Database port when not using local socket. Ignored for SQLite.
+@@ -444,7 +446,7 @@ Timeout=4
+ #
+ # Mandatory: no
+ # Default:
+-# AlertScriptsPath=${datadir}/zabbix/alertscripts
++# AlertScriptsPath=/usr/share/zabbix/alertscripts
+ 
+ ### Option: ExternalScripts
+ #	Full path to location of external scripts.
+@@ -452,7 +454,8 @@ Timeout=4
+ #
+ # Mandatory: no
+ # Default:
+-# ExternalScripts=${datadir}/zabbix/externalscripts
++# ExternalScripts=/usr/share/zabbix/externalscripts
++ExternalScripts=/var/lib/zabbixsrv/externalscripts
+ 
+ ### Option: FpingLocation
+ #	Location of fping.
+@@ -496,6 +499,7 @@ LogSlowQueries=3000
+ # Mandatory: no
+ # Default:
+ # TmpDir=/tmp
++TmpDir=/var/lib/zabbixsrv/tmp
+ 
+ ### Option: StartProxyPollers
+ #	Number of pre-forked instances of pollers for passive proxies.
+@@ -544,15 +548,15 @@ LogSlowQueries=3000
+ 
+ ### Option: Include
+ #	You may include individual files or all files in a directory in the configuration file.
+-#	Installing Zabbix will create include directory in /usr/local/etc, unless modified during the compile time.
++#	Installing Zabbix will create include directory in /etc, unless modified during the compile time.
+ #
+ # Mandatory: no
+ # Default:
+ # Include=
+ 
+-# Include=/usr/local/etc/zabbix_server.general.conf
+-# Include=/usr/local/etc/zabbix_server.conf.d/
+-# Include=/usr/local/etc/zabbix_server.conf.d/*.conf
++# Include=/etc/zabbix_server.general.conf
++# Include=/etc/zabbix_server.conf.d/
++# Include=/etc/zabbix_server.conf.d/*.conf
+ 
+ ### Option: SSLCertLocation
+ #	Location of SSL client certificates.
+@@ -560,7 +564,7 @@ LogSlowQueries=3000
+ #
+ # Mandatory: no
+ # Default:
+-# SSLCertLocation=${datadir}/zabbix/ssl/certs
++# SSLCertLocation=/usr/share/zabbix/ssl/certs
+ 
+ ### Option: SSLKeyLocation
+ #	Location of private keys for SSL client certificates.
+@@ -568,7 +572,7 @@ LogSlowQueries=3000
+ #
+ # Mandatory: no
+ # Default:
+-# SSLKeyLocation=${datadir}/zabbix/ssl/keys
++# SSLKeyLocation=/usr/share/zabbix/ssl/keys
+ 
+ ### Option: SSLCALocation
+ #	Override the location of certificate authority (CA) files for SSL server certificate verification.
+diff -rup zabbix-3.0.13-orig/database/ibm_db2/data.sql zabbix-3.0.13/database/ibm_db2/data.sql
+--- zabbix-3.0.13-orig/database/ibm_db2/data.sql	2017-11-09 12:33:46.000000000 +0100
++++ zabbix-3.0.13/database/ibm_db2/data.sql	2017-11-16 10:41:35.605006794 +0100
+@@ -957,7 +957,7 @@ INSERT INTO usrgrp (usrgrpid,name,gui_ac
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('4','7','1');
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('2','8','2');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('1','Ping','/bin/ping -c 3 {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+-INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/usr/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
++INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('3','Detect operating system','sudo /usr/bin/nmap -O {HOST.CONN} 2>&1','2','7',NULL,'','','0','1');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('2','Auto discovery. Linux servers.','1','0','1','0','','','0','','','');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('3','Report problems to Zabbix administrators','0','0','1','3600','{TRIGGER.STATUS}: {TRIGGER.NAME}','Trigger: {TRIGGER.NAME}
+diff -rup zabbix-3.0.13-orig/database/mysql/data.sql zabbix-3.0.13/database/mysql/data.sql
+--- zabbix-3.0.13-orig/database/mysql/data.sql	2017-11-09 12:33:47.000000000 +0100
++++ zabbix-3.0.13/database/mysql/data.sql	2017-11-16 10:41:35.565006701 +0100
+@@ -936,7 +936,7 @@ INSERT INTO `usrgrp` (`usrgrpid`,`name`,
+ INSERT INTO `users_groups` (`id`,`usrgrpid`,`userid`) values ('4','7','1');
+ INSERT INTO `users_groups` (`id`,`usrgrpid`,`userid`) values ('2','8','2');
+ INSERT INTO `scripts` (`scriptid`,`name`,`command`,`host_access`,`usrgrpid`,`groupid`,`description`,`confirmation`,`type`,`execute_on`) values ('1','Ping','/bin/ping -c 3 {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+-INSERT INTO `scripts` (`scriptid`,`name`,`command`,`host_access`,`usrgrpid`,`groupid`,`description`,`confirmation`,`type`,`execute_on`) values ('2','Traceroute','/usr/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
++INSERT INTO `scripts` (`scriptid`,`name`,`command`,`host_access`,`usrgrpid`,`groupid`,`description`,`confirmation`,`type`,`execute_on`) values ('2','Traceroute','/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+ INSERT INTO `scripts` (`scriptid`,`name`,`command`,`host_access`,`usrgrpid`,`groupid`,`description`,`confirmation`,`type`,`execute_on`) values ('3','Detect operating system','sudo /usr/bin/nmap -O {HOST.CONN} 2>&1','2','7',NULL,'','','0','1');
+ INSERT INTO `actions` (`actionid`,`name`,`eventsource`,`evaltype`,`status`,`esc_period`,`def_shortdata`,`def_longdata`,`recovery_msg`,`r_shortdata`,`r_longdata`,`formula`) values ('2','Auto discovery. Linux servers.','1','0','1','0','','','0','','','');
+ INSERT INTO `actions` (`actionid`,`name`,`eventsource`,`evaltype`,`status`,`esc_period`,`def_shortdata`,`def_longdata`,`recovery_msg`,`r_shortdata`,`r_longdata`,`formula`) values ('3','Report problems to Zabbix administrators','0','0','1','3600','{TRIGGER.STATUS}: {TRIGGER.NAME}','Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}','1','{TRIGGER.STATUS}: {TRIGGER.NAME}','Trigger: {TRIGGER.NAME}\r\nTrigger status: {TRIGGER.STATUS}\r\nTrigger severity: {TRIGGER.SEVERITY}\r\nTrigger URL: {TRIGGER.URL}\r\n\r\nItem values:\r\n\r\n1. {ITEM.NAME1} ({HOST.NAME1}:{ITEM.KEY1}): {ITEM.VALUE1}\r\n2. {ITEM.NAME2} ({HOST.NAME2}:{ITEM.KEY2}): {ITEM.VALUE2}\r\n3. {ITEM.NAME3} ({HOST.NAME3}:{ITEM.KEY3}): {ITEM.VALUE3}\r\n\r\nOriginal event ID: {EVENT.ID}','');
+diff -rup zabbix-3.0.13-orig/database/oracle/data.sql zabbix-3.0.13/database/oracle/data.sql
+--- zabbix-3.0.13-orig/database/oracle/data.sql	2017-11-09 12:33:47.000000000 +0100
++++ zabbix-3.0.13/database/oracle/data.sql	2017-11-16 10:41:35.595006771 +0100
+@@ -2810,7 +2810,7 @@ INSERT INTO users_groups (id,usrgrpid,us
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('1','Ping','/bin/ping -c 3 {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1')
+ /
+ 
+-INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/usr/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1')
++INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1')
+ /
+ 
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('3','Detect operating system','sudo /usr/bin/nmap -O {HOST.CONN} 2>&1','2','7',NULL,'','','0','1')
+diff -rup zabbix-3.0.13-orig/database/postgresql/data.sql zabbix-3.0.13/database/postgresql/data.sql
+--- zabbix-3.0.13-orig/database/postgresql/data.sql	2017-11-09 12:33:47.000000000 +0100
++++ zabbix-3.0.13/database/postgresql/data.sql	2017-11-16 10:41:35.576006726 +0100
+@@ -958,7 +958,7 @@ INSERT INTO usrgrp (usrgrpid,name,gui_ac
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('4','7','1');
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('2','8','2');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('1','Ping','/bin/ping -c 3 {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+-INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/usr/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
++INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('3','Detect operating system','sudo /usr/bin/nmap -O {HOST.CONN} 2>&1','2','7',NULL,'','','0','1');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('2','Auto discovery. Linux servers.','1','0','1','0','','','0','','','');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('3','Report problems to Zabbix administrators','0','0','1','3600','{TRIGGER.STATUS}: {TRIGGER.NAME}','Trigger: {TRIGGER.NAME}
+diff -rup zabbix-3.0.13-orig/database/sqlite3/data.sql zabbix-3.0.13/database/sqlite3/data.sql
+--- zabbix-3.0.13-orig/database/sqlite3/data.sql	2017-11-09 12:33:47.000000000 +0100
++++ zabbix-3.0.13/database/sqlite3/data.sql	2017-11-16 10:41:35.632006857 +0100
+@@ -958,7 +958,7 @@ INSERT INTO usrgrp (usrgrpid,name,gui_ac
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('4','7','1');
+ INSERT INTO users_groups (id,usrgrpid,userid) values ('2','8','2');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('1','Ping','/bin/ping -c 3 {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+-INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/usr/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
++INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('2','Traceroute','/bin/traceroute {HOST.CONN} 2>&1','2',NULL,NULL,'','','0','1');
+ INSERT INTO scripts (scriptid,name,command,host_access,usrgrpid,groupid,description,confirmation,type,execute_on) values ('3','Detect operating system','sudo /usr/bin/nmap -O {HOST.CONN} 2>&1','2','7',NULL,'','','0','1');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('2','Auto discovery. Linux servers.','1','0','1','0','','','0','','','');
+ INSERT INTO actions (actionid,name,eventsource,evaltype,status,esc_period,def_shortdata,def_longdata,recovery_msg,r_shortdata,r_longdata,formula) values ('3','Report problems to Zabbix administrators','0','0','1','3600','{TRIGGER.STATUS}: {TRIGGER.NAME}','Trigger: {TRIGGER.NAME}
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/core/CConfigFile.php zabbix-3.0.13/frontends/php/include/classes/core/CConfigFile.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/core/CConfigFile.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/core/CConfigFile.php	2017-11-16 10:41:35.506006563 +0100
+@@ -24,7 +24,7 @@ class CConfigFile {
+ 	const CONFIG_NOT_FOUND = 1;
+ 	const CONFIG_ERROR = 2;
+ 
+-	const CONFIG_FILE_PATH = '/conf/zabbix.conf.php';
++	const CONFIG_FILE_PATH = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ 	private static $supported_db_types = [
+ 		ZBX_DB_DB2 => true,
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/core/ZBase.php zabbix-3.0.13/frontends/php/include/classes/core/ZBase.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/core/ZBase.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/core/ZBase.php	2017-11-16 10:41:35.518006591 +0100
+@@ -104,7 +104,7 @@ class ZBase {
+ 		require_once $this->getRootDir().'/include/ident.inc.php';
+ 		require_once $this->getRootDir().'/include/images.inc.php';
+ 		require_once $this->getRootDir().'/include/items.inc.php';
+-		require_once $this->getRootDir().'/include/maintenances.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 		require_once $this->getRootDir().'/include/maps.inc.php';
+ 		require_once $this->getRootDir().'/include/media.inc.php';
+ 		require_once $this->getRootDir().'/include/services.inc.php';
+@@ -266,7 +266,7 @@ class ZBase {
+ 	 * @throws Exception
+ 	 */
+ 	protected function setMaintenanceMode() {
+-		require_once $this->getRootDir().'/conf/maintenance.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 
+ 		if (defined('ZBX_DENY_GUI_ACCESS')) {
+ 			$user_ip = (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+@@ -282,7 +282,7 @@ class ZBase {
+ 	 * Load zabbix config file.
+ 	 */
+ 	protected function loadConfigFile() {
+-		$configFile = $this->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$configFile = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($configFile);
+ 		$this->config = $config->load();
+ 	}
+diff -rup zabbix-3.0.13-orig/frontends/php/include/classes/setup/CSetupWizard.php zabbix-3.0.13/frontends/php/include/classes/setup/CSetupWizard.php
+--- zabbix-3.0.13-orig/frontends/php/include/classes/setup/CSetupWizard.php	2017-11-09 12:33:28.000000000 +0100
++++ zabbix-3.0.13/frontends/php/include/classes/setup/CSetupWizard.php	2017-11-16 10:41:35.519006594 +0100
+@@ -348,7 +348,7 @@ class CSetupWizard extends CForm {
+ 	function stage5() {
+ 		$this->setConfig('ZBX_CONFIG_FILE_CORRECT', true);
+ 
+-		$config_file_name = Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$config_file_name = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($config_file_name);
+ 		$config->config = [
+ 			'DB' => [
+@@ -517,7 +517,7 @@ class CSetupWizard extends CForm {
+ 				// make zabbix.conf.php downloadable
+ 				header('Content-Type: application/x-httpd-php');
+ 				header('Content-Disposition: attachment; filename="'.basename(CConfigFile::CONFIG_FILE_PATH).'"');
+-				$config = new CConfigFile(Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH);
++				$config = new CConfigFile(CConfigFile::CONFIG_FILE_PATH);
+ 				$config->config = [
+ 					'DB' => [
+ 						'TYPE' => $this->getConfig('DB_TYPE'),
+diff -rup zabbix-3.0.13-orig/man/zabbix_agentd.man zabbix-3.0.13/man/zabbix_agentd.man
+--- zabbix-3.0.13-orig/man/zabbix_agentd.man	2017-11-09 12:33:31.000000000 +0100
++++ zabbix-3.0.13/man/zabbix_agentd.man	2017-11-16 10:41:35.647006892 +0100
+@@ -116,8 +116,8 @@ Display this help and exit.
+ Output version information and exit.
+ .SH FILES
+ .TP
+-.I /usr/local/etc/zabbix_agentd.conf
+-Default location of Zabbix agent configuration file (if not modified during compile time).
++.I /etc/zabbix_agentd.conf
++Default location of Zabbix agent configuration file
+ .SH "SEE ALSO"
+ .BR zabbix_get (8),
+ .BR zabbix_proxy (8),
+diff -rup zabbix-3.0.13-orig/man/zabbix_proxy.man zabbix-3.0.13/man/zabbix_proxy.man
+--- zabbix-3.0.13-orig/man/zabbix_proxy.man	2017-11-09 12:33:31.000000000 +0100
++++ zabbix-3.0.13/man/zabbix_proxy.man	2017-11-16 10:41:35.648006894 +0100
+@@ -79,8 +79,8 @@ Display this help and exit.
+ Output version information and exit.
+ .SH FILES
+ .TP
+-.I /usr/local/etc/zabbix_proxy.conf
+-Default location of Zabbix proxy configuration file (if not modified during compile time).
++.I /etc/zabbix_proxy.conf
++Default location of Zabbix proxy configuration file
+ .SH "SEE ALSO"
+ .BR zabbix_agentd (8),
+ .BR zabbix_get (8),
+diff -rup zabbix-3.0.13-orig/man/zabbix_sender.man zabbix-3.0.13/man/zabbix_sender.man
+--- zabbix-3.0.13-orig/man/zabbix_sender.man	2017-11-09 12:33:31.000000000 +0100
++++ zabbix-3.0.13/man/zabbix_sender.man	2017-11-16 10:41:35.649006897 +0100
+@@ -436,7 +436,7 @@ Host names and keys are defined in the f
+ .RE
+ 
+ .br
+-\fBecho "\- hw.serial.number 1287872261 SQ4321ASDF" | zabbix_sender \-c /usr/local/etc/zabbix_agentd.conf \-T \-i \-\fR
++\fBecho "\- hw.serial.number 1287872261 SQ4321ASDF" | zabbix_sender \-c /etc/zabbix_agentd.conf \-T \-i \-\fR
+ .br
+ .RS
+ Send a timestamped value from the commandline to Zabbix server, specified in the agent configuration file.
+diff -rup zabbix-3.0.13-orig/man/zabbix_server.man zabbix-3.0.13/man/zabbix_server.man
+--- zabbix-3.0.13-orig/man/zabbix_server.man	2017-11-09 12:33:31.000000000 +0100
++++ zabbix-3.0.13/man/zabbix_server.man	2017-11-16 10:41:35.649006897 +0100
+@@ -78,8 +78,8 @@ Display this help and exit.
+ Output version information and exit.
+ .SH FILES
+ .TP
+-.I /usr/local/etc/zabbix_server.conf
+-Default location of Zabbix server configuration file (if not modified during compile time).
++.I /etc/zabbix_server.conf
++Default location of Zabbix server configuration file
+ .SH "SEE ALSO"
+ .BR zabbix_agentd (8),
+ .BR zabbix_get (8),
+diff -rup zabbix-3.0.13-orig/src/zabbix_proxy/Makefile.in zabbix-3.0.13/src/zabbix_proxy/Makefile.in
+--- zabbix-3.0.13-orig/src/zabbix_proxy/Makefile.in	2017-11-09 12:33:37.000000000 +0100
++++ zabbix-3.0.13/src/zabbix_proxy/Makefile.in	2017-11-16 10:41:35.527006612 +0100
+@@ -495,7 +495,7 @@ zabbix_proxy_CFLAGS = \
+ 
+ PROXY_CONFIG = zabbix_proxy.conf
+ INCLUDE_DIR = $(DESTDIR)@sysconfdir@/$(PROXY_CONFIG).d
+-EXSCRIPTS_DIR = $(DESTDIR)@datadir@/zabbix/externalscripts
++EXSCRIPTS_DIR = $(DESTDIR)/var/lib/zabbixsrv/externalscripts
+ MODULES_DIR = $(DESTDIR)@libdir@
+ all: all-recursive
+ 
+diff -rup zabbix-3.0.13-orig/src/zabbix_server/Makefile.in zabbix-3.0.13/src/zabbix_server/Makefile.in
+--- zabbix-3.0.13-orig/src/zabbix_server/Makefile.in	2017-11-09 12:33:37.000000000 +0100
++++ zabbix-3.0.13/src/zabbix_server/Makefile.in	2017-11-16 10:41:35.525006607 +0100
+@@ -503,8 +503,8 @@ zabbix_server_CFLAGS = \
+ 
+ SERVER_CONFIG = zabbix_server.conf
+ INCLUDE_DIR = $(DESTDIR)@sysconfdir@/$(SERVER_CONFIG).d
+-EXSCRIPTS_DIR = $(DESTDIR)@datadir@/zabbix/externalscripts
+-ALSCRIPTS_DIR = $(DESTDIR)@datadir@/zabbix/alertscripts
++EXSCRIPTS_DIR = $(DESTDIR)/var/lib/zabbixsrv/externalscripts
++ALSCRIPTS_DIR = $(DESTDIR)/var/lib/zabbixsrv/alertscripts
+ MODULES_DIR = $(DESTDIR)@libdir@
+ all: all-recursive
+ 
+diff -rup zabbix-3.0.13-orig/upgrades/dbpatches/2.0/mysql/patch.sql zabbix-3.0.13/upgrades/dbpatches/2.0/mysql/patch.sql
+--- zabbix-3.0.13-orig/upgrades/dbpatches/2.0/mysql/patch.sql	2017-11-09 12:33:51.000000000 +0100
++++ zabbix-3.0.13/upgrades/dbpatches/2.0/mysql/patch.sql	2017-11-16 10:41:35.653006906 +0100
+@@ -298,7 +298,7 @@ INSERT INTO help_items (itemtype,key_,de
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.cksum[file]','Calculate check sum of a given file. Check sum of the file calculate by standard algorithm used by UNIX utility cksum. Example: vfs.file.cksum[/etc/passwd]');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.contents[file,&lt;encoding&gt;]','Get contents of a given file.');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.exists[file]','Check if file exists. 0 - file does not exist, 1 - file exists');
+-INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/usr/local/etc/zabbix_agentd.conf]');
++INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/etc/zabbix_agentd.conf]');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.regexp[file,regexp,&lt;encoding&gt;]','Find string in a file. Matched string');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.regmatch[file,regexp,&lt;encoding&gt;]','Find string in a file. 0 - expression not found, 1 - found');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.size[file]','Size of a given file. Size in bytes. File must have read permissions for user zabbix. Example: vfs.file.size[/var/log/syslog]');
+@@ -385,7 +385,7 @@ INSERT INTO help_items (itemtype,key_,de
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.cksum[file]','Calculate check sum of a given file. Check sum of the file calculate by standard algorithm used by UNIX utility cksum. Example: vfs.file.cksum[/etc/passwd]');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.contents[file,&lt;encoding&gt;]','Get contents of a given file.');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.exists[file]','Check if file exists. 0 - file does not exist, 1 - file exists');
+-INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/usr/local/etc/zabbix_agentd.conf]');
++INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/etc/zabbix_agentd.conf]');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.regexp[file,regexp,&lt;encoding&gt;]','Find string in a file. Matched string');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.regmatch[file,regexp,&lt;encoding&gt;]','Find string in a file. 0 - expression not found, 1 - found');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.size[file]','Size of a given file. Size in bytes. File must have read permissions for user zabbix. Example: vfs.file.size[/var/log/syslog]');
+diff -rup zabbix-3.0.13-orig/upgrades/dbpatches/2.0/postgresql/patch.sql zabbix-3.0.13/upgrades/dbpatches/2.0/postgresql/patch.sql
+--- zabbix-3.0.13-orig/upgrades/dbpatches/2.0/postgresql/patch.sql	2017-11-09 12:33:51.000000000 +0100
++++ zabbix-3.0.13/upgrades/dbpatches/2.0/postgresql/patch.sql	2017-11-16 10:41:35.656006913 +0100
+@@ -301,7 +301,7 @@ INSERT INTO help_items (itemtype,key_,de
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.cksum[file]','Calculate check sum of a given file. Check sum of the file calculate by standard algorithm used by UNIX utility cksum. Example: vfs.file.cksum[/etc/passwd]');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.contents[file,&lt;encoding&gt;]','Get contents of a given file.');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.exists[file]','Check if file exists. 0 - file does not exist, 1 - file exists');
+-INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/usr/local/etc/zabbix_agentd.conf]');
++INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/etc/zabbix_agentd.conf]');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.regexp[file,regexp,&lt;encoding&gt;]','Find string in a file. Matched string');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.regmatch[file,regexp,&lt;encoding&gt;]','Find string in a file. 0 - expression not found, 1 - found');
+ INSERT INTO help_items (itemtype,key_,description) values ('0','vfs.file.size[file]','Size of a given file. Size in bytes. File must have read permissions for user zabbix. Example: vfs.file.size[/var/log/syslog]');
+@@ -388,7 +388,7 @@ INSERT INTO help_items (itemtype,key_,de
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.cksum[file]','Calculate check sum of a given file. Check sum of the file calculate by standard algorithm used by UNIX utility cksum. Example: vfs.file.cksum[/etc/passwd]');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.contents[file,&lt;encoding&gt;]','Get contents of a given file.');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.exists[file]','Check if file exists. 0 - file does not exist, 1 - file exists');
+-INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/usr/local/etc/zabbix_agentd.conf]');
++INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.md5sum[file]','Calculate MD5 check sum of a given file. String MD5 hash of the file. Can be used for files less than 64MB, unsupported otherwise. Example: vfs.file.md5sum[/etc/zabbix_agentd.conf]');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.regexp[file,regexp,&lt;encoding&gt;]','Find string in a file. Matched string');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.regmatch[file,regexp,&lt;encoding&gt;]','Find string in a file. 0 - expression not found, 1 - found');
+ INSERT INTO help_items (itemtype,key_,description) values ('7','vfs.file.size[file]','Size of a given file. Size in bytes. File must have read permissions for user zabbix. Example: vfs.file.size[/var/log/syslog]');
