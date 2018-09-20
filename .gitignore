@@ -1,5 +1,8 @@
 *.src.rpm
+*.rpm
 .*.sw?
 *.tar.gz
 x86_64
 noarch
+BUILD
+BUILDROOT
