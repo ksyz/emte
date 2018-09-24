@@ -7,9 +7,12 @@
 
 %global srcname zabbix
 #%%global prerelease rc2
+%if ! 0%{?patchver}
+%define patchver 22
+%endif
 
 Name:           zabbix
-Version:        3.0.22
+Version:        3.0.%{patchver}
 Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
