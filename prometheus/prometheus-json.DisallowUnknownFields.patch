@@ -1,0 +1,11 @@
+diff -ru prometheus-bc6058c81272a8d938c05e75607371284236aadc.orig/discovery/targetgroup/targetgroup.go prometheus-bc6058c81272a8d938c05e75607371284236aadc/discovery/targetgroup/targetgroup.go
+--- prometheus-bc6058c81272a8d938c05e75607371284236aadc.orig/discovery/targetgroup/targetgroup.go	2018-04-19 14:41:25.469692397 +0200
++++ prometheus-bc6058c81272a8d938c05e75607371284236aadc/discovery/targetgroup/targetgroup.go	2018-04-19 14:42:06.498799802 +0200
+@@ -80,7 +80,6 @@
+ 	}{}
+ 
+ 	dec := json.NewDecoder(bytes.NewReader(b))
+-	dec.DisallowUnknownFields()
+ 	if err := dec.Decode(&g); err != nil {
+ 		return err
+ 	}

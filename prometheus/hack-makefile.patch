@@ -1,0 +1,78 @@
+From 03de766b2698c601fcea44d50f0690d5d1953839 Mon Sep 17 00:00:00 2001
+From: Jan Chaloupka <jchaloup@redhat.com>
+Date: Thu, 23 Jul 2015 14:17:29 +0200
+Subject: [PATCH] commit
+
+---
+ Makefile.INCLUDE | 30 ++++++++++++++----------------
+ 1 file changed, 14 insertions(+), 16 deletions(-)
+
+diff --git a/Makefile.INCLUDE b/Makefile.INCLUDE
+index 3a3f795..578c14b 100644
+--- a/Makefile.INCLUDE
++++ b/Makefile.INCLUDE
+@@ -17,7 +17,6 @@
+ 
+ current_dir := $(patsubst %/,%, $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+ 
+-VERSION=$(shell cat $(current_dir)/version/VERSION)
+ 
+ OS=$(shell uname)
+ ARCH=$(shell uname -m)
+@@ -30,7 +29,6 @@ MAKEFILE_DIR ?= $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+ 
+ BUILD_PATH = $(MAKEFILE_DIR)/.build
+ 
+-GO_VERSION := 1.4.2
+ GOOS = $(subst Darwin,darwin,$(subst Linux,linux,$(subst FreeBSD,freebsd,$(OS))))
+ 
+ ifeq ($(GOOS),darwin)
+@@ -45,13 +43,13 @@ unexport GOBIN
+ GOARCH  = $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
+ GOPKG  ?= go$(GO_VERSION).$(GOOS)-$(GOARCH)$(RELEASE_SUFFIX).tar.gz
+ GOURL  ?= https://golang.org/dl
+-GOROOT  = $(BUILD_PATH)/root/go
++GOROOT  = /usr/lib/golang
+ GOPATH  = $(BUILD_PATH)/root/gopath
+-GOCC    = $(GOROOT)/bin/go
++GOCC    = /usr/bin/go
+ TMPDIR  = /tmp
+ GOENV   = TMPDIR=$(TMPDIR) GOROOT=$(GOROOT) GOPATH=$(GOPATH)
+ GO      = $(GOENV) $(GOCC)
+-GOFMT   = $(GOROOT)/bin/gofmt
++GOFMT   = /usr/bin/gofmt
+ 
+ UNAME    := $(shell uname)
+ REPO_PATH = github.com/prometheus/prometheus
+@@ -63,17 +61,17 @@ export PATH := $(GOPATH)/bin:$(GOROOT)/bin:$(PATH)
+ 
+ export GO_TEST_FLAGS ?= -short
+ 
+-REV        := $(shell git rev-parse --short HEAD 2> /dev/null  || echo 'unknown')
+-BRANCH     := $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null  || echo 'unknown')
+-HOSTNAME   := $(shell hostname -f)
+-BUILD_DATE := $(shell date +%Y%m%d-%H:%M:%S)
+-BUILDFLAGS := -ldflags \
+-  " -X $(REPO_PATH)/version.Version $(VERSION)\
+-		-X $(REPO_PATH)/version.Revision $(REV)\
+-		-X $(REPO_PATH)/version.Branch $(BRANCH)\
+-		-X $(REPO_PATH)/version.BuildUser $(USER)@$(HOSTNAME)\
+-		-X $(REPO_PATH)/version.BuildDate $(BUILD_DATE)\
+-		-X $(REPO_PATH)/version.GoVersion $(GO_VERSION)"
++#REV        := $(shell git rev-parse --short HEAD 2> /dev/null  || echo 'unknown')
++#BRANCH     := $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null  || echo 'unknown')
++#HOSTNAME   := $(shell hostname -f)
++#BUILD_DATE := $(shell date +%Y%m%d-%H:%M:%S)
++#BUILDFLAGS := -ldflags \
++#  " -X $(REPO_PATH)/version.Version $(VERSION)\
++#		-X $(REPO_PATH)/version.Revision $(REV)\
++#		-X $(REPO_PATH)/version.Branch $(BRANCH)\
++#		-X $(REPO_PATH)/version.BuildUser $(USER)@$(HOSTNAME)\
++#		-X $(REPO_PATH)/version.BuildDate $(BUILD_DATE)\
++#		-X $(REPO_PATH)/version.GoVersion $(GO_VERSION)"
+ CURL := curl
+ 
+ ARCHIVE := prometheus-$(VERSION).$(GOOS)-$(GOARCH).tar.gz
+-- 
+1.9.3
+

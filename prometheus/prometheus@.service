@@ -1,0 +1,13 @@
+[Unit]
+Description=Prometheus monitoring system on port %i
+AssertPathExists=/var/lib/prometheus/%i/
+
+[Service]
+User=prometheus
+EnvironmentFile=/etc/sysconfig/prometheus@%i
+ExecStart=/usr/bin/prometheus --web.listen-address=${LISTEN}:%i --config.file=/etc/prometheus/config_%i.yml --storage.tsdb.path=/var/lib/prometheus/%i/data $OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+DefaultInstance=9090
