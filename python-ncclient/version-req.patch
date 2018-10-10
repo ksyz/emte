@@ -1,0 +1,10 @@
+diff -rup ncclient-0.6.3.orig/requirements.txt ncclient-0.6.3/requirements.txt
+--- ncclient-0.6.3.orig/requirements.txt	2018-10-01 13:07:21.426585603 +0200
++++ ncclient-0.6.3/requirements.txt	2018-10-01 13:07:36.638594058 +0200
+@@ -1,5 +1,5 @@
+ setuptools>0.6
+ paramiko>=1.15.0
+-lxml>=3.3.0
++lxml>=3.2.4
+ selectors2>=2.0.1
+ six
