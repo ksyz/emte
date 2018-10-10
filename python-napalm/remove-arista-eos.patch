@@ -1,0 +1,107 @@
+diff -rup napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/docs/index.rst napalm-31dbfef4f228699115a74524c5021b81d86d39c2/docs/index.rst
+--- napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/docs/index.rst	2018-09-28 11:12:50.739730010 +0200
++++ napalm-31dbfef4f228699115a74524c5021b81d86d39c2/docs/index.rst	2018-09-28 11:16:19.923846267 +0200
+@@ -13,7 +13,6 @@ NAPALM supports several methods to conne
+ Supported Network Operating Systems:
+ ------------------------------------
+ 
+-* Arista EOS
+ * Cisco IOS
+ * Cisco IOS-XR
+ * Cisco NX-OS
+Only in napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/docs/support: eos.rst
+diff -rup napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/docs/support/index.rst napalm-31dbfef4f228699115a74524c5021b81d86d39c2/docs/support/index.rst
+--- napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/docs/support/index.rst	2018-09-28 11:12:50.738730009 +0200
++++ napalm-31dbfef4f228699115a74524c5021b81d86d39c2/docs/support/index.rst	2018-09-28 11:15:17.954811829 +0200
+@@ -8,17 +8,16 @@ General support matrix
+ 
+ 
+ 
+-  =====================   ==========  =============   ============ ============  ============ ============
+-  _                       EOS         Junos           IOS-XR       NX-OS         NX-OS SSH    IOS
+-  =====================   ==========  =============   ============ ============  ============ ============
+-  **Driver Name**         eos         junos           iosxr        nxos          nxos_ssh     ios
+-  **Structured data**     Yes         Yes             No           Yes           No           No
+-  **Minimum version**     4.15.0F     12.1            5.1.0        6.1 [#g1]_                 12.4(20)T
+-  **Backend library**     `pyeapi`_   `junos-eznc`_   `pyIOSXR`_   `pynxos`_     `netmiko`_   `netmiko`_
+-  **Caveats**             :doc:`eos`                               :doc:`nxos`   :doc:`nxos`  :doc:`ios`
+-  =====================   ==========  =============   ============ ============  ============ ============
++  =====================  =============   ============ ============  ============ ============
++  _                      Junos           IOS-XR       NX-OS         NX-OS SSH    IOS
++  =====================  =============   ============ ============  ============ ============
++  **Driver Name**        junos           iosxr        nxos          nxos_ssh     ios
++  **Structured data**    Yes             No           Yes           No           No
++  **Minimum version**    12.1            5.1.0        6.1 [#g1]_                 12.4(20)T
++  **Backend library**    `junos-eznc`_   `pyIOSXR`_   `pynxos`_     `netmiko`_   `netmiko`_
++  **Caveats**                                         :doc:`nxos`   :doc:`nxos`  :doc:`ios`
++  =====================  =============   ============ ============  ============ ============
+ 
+-.. _pyeapi: https://github.com/arista-eosplus/pyeapi
+ .. _junos-eznc: https://github.com/Juniper/py-junos-eznc
+ .. _pyIOSXR: https://github.com/fooelisa/pyiosxr
+ .. _pynxos: https://github.com/networktocode/pynxos
+Only in napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/napalm: eos
+diff -rup napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/requirements.txt napalm-31dbfef4f228699115a74524c5021b81d86d39c2/requirements.txt
+--- napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/requirements.txt	2018-09-28 11:12:50.733730006 +0200
++++ napalm-31dbfef4f228699115a74524c5021b81d86d39c2/requirements.txt	2018-09-28 11:13:48.725762234 +0200
+@@ -5,7 +5,6 @@ textfsm
+ jinja2
+ netaddr
+ pyYAML
+-pyeapi
+ netmiko>=2.1.1
+ pyIOSXR>=0.53
+ junos-eznc>=2.1.5
+Only in napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/test: eos
+diff -rup napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/vagrant/provision.py napalm-31dbfef4f228699115a74524c5021b81d86d39c2/vagrant/provision.py
+--- napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/vagrant/provision.py	2018-09-28 11:12:50.734730007 +0200
++++ napalm-31dbfef4f228699115a74524c5021b81d86d39c2/vagrant/provision.py	2018-09-28 11:14:01.608769394 +0200
+@@ -4,7 +4,6 @@ from __future__ import unicode_literals
+ 
+ import sys
+ from pyIOSXR import IOSXR
+-import pyeapi
+ 
+ from jnpr.junos import Device
+ from jnpr.junos.utils.config import Config
+@@ -30,40 +29,6 @@ def provision_iosxr(port, username, pass
+         # This actually means everything went fine
+         print_info_message()
+ 
+-
+-def provision_eos(port, username, password):
+-    connection = pyeapi.client.connect(
+-        transport='https',
+-        host='localhost',
+-        username='vagrant',
+-        password='vagrant',
+-        port=port
+-    )
+-    device = pyeapi.client.Node(connection)
+-
+-    commands = list()
+-    commands.append('configure session')
+-    commands.append('rollback clean-config')
+-
+-    with open('../eos/initial.conf', 'r') as f:
+-        lines = f.readlines()
+-
+-    for line in lines:
+-        line = line.strip()
+-        if line == '':
+-            continue
+-        if line.startswith('!'):
+-            continue
+-        commands.append(line)
+-
+-    commands[-1] = 'commit'
+-
+-    try:
+-        device.run_commands(commands)
+-    except httplib.BadStatusLine:
+-        # This actually means everything went fine
+-        print_info_message()
+-
+ 
+ def provision_junos(port, username, password):
+     device = Device('127.0.0.1', user=username, port=port)

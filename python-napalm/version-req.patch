@@ -1,0 +1,16 @@
+diff -rup napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/requirements.txt napalm-31dbfef4f228699115a74524c5021b81d86d39c2/requirements.txt
+--- napalm-31dbfef4f228699115a74524c5021b81d86d39c2.orig/requirements.txt	2018-10-01 12:59:54.673337293 +0200
++++ napalm-31dbfef4f228699115a74524c5021b81d86d39c2/requirements.txt	2018-10-01 13:00:08.741345107 +0200
+@@ -1,4 +1,4 @@
+-setuptools>=38.4.0
++setuptools
+ cffi>=1.11.3
+ future
+ textfsm
+@@ -8,5 +8,5 @@ pyYAML
+ netmiko>=2.1.1
+ pyIOSXR>=0.53
+ junos-eznc>=2.1.5
+-pynxos==0.0.3
++pynxos>=0.0.3
+ scp
