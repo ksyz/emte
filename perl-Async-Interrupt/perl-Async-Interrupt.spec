@@ -1,6 +1,6 @@
 Name:           perl-Async-Interrupt
 Version:        1.24
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Allow C/XS libraries to interrupt perl asynchronously
 License:        GPL+ or Artistic
 Group:          Development/Libraries
@@ -13,6 +13,7 @@ BuildRequires:  perl(ExtUtils::MakeMaker) >= 6.52
 BuildRequires:  gcc
 BuildRequires:  perl-devel
 BuildRequires:  perl-generators
+BuildRequires:  perl-interpreter
 Requires:       perl(Canary::Stability)
 Requires:       perl(common::sense)
 Requires:       perl(ExtUtils::MakeMaker) >= 6.52
@@ -55,6 +56,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man3/*
 
 %changelog
+* Thu Oct 11 2018 Michal Ingeli <mi@v3.sk> 1.24-3
+- Added perl-interpret BR
+
 * Wed Sep 19 2018 Michal Ingeli <mi@v3.sk> 1.24-2
 - Added perl-generators BR
 
