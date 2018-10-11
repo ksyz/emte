@@ -1,6 +1,6 @@
 Name:           perl-PathTools
 Version:        3.75
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        PathTools Perl module (Cwd, File::Spec)
 # Cwd.xs:                   BSD
 # other files:              GPL+ or Artistic
@@ -16,7 +16,7 @@ BuildRequires:  make
 BuildRequires:  perl-devel
 BuildRequires:  perl-generators
 BuildRequires:  perl-interpreter
-BuildRequires:  perl(ExtUtils::MakeMaker) >= 6.76
+BuildRequires:  perl(ExtUtils::MakeMaker)
 BuildRequires:  sed
 # Run-time:
 BuildRequires:  perl(Carp)
@@ -79,6 +79,9 @@ make test
 %{_mandir}/man3/*
 
 %changelog
+* Thu Oct 11 2018 Michal Ingeli <mi@v3.sk> - 3.75-3
+- No MakeMaker min version
+
 * Thu Aug 30 2018 Michal Ingeli <mi@v3.sk> - 3.75-2
 - 3.75 bump
 - skip 'recommends' for EL
