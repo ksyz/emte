@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=FreeSSM
+Exec=FreeSSM
+Icon=FreeSSM
+Comment=Diagnostic and adjustment tool for Subaru vehicles
+Terminal=false
+Type=Application
+Categories=Utility
