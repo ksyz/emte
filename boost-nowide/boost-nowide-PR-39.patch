@@ -1,0 +1,23 @@
+From 0423103088af35de315626c6056dd248e16bc3c9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Bron?= <frederic.bron@m4x.org>
+Date: Mon, 18 Jun 2018 11:09:12 +0200
+Subject: [PATCH] Fixed issue #35: a pointer to char was wrongly compared to a
+ char.
+
+---
+ include/boost/nowide/cenv.hpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/boost/nowide/cenv.hpp b/include/boost/nowide/cenv.hpp
+index 5f6d084..ab1a50a 100644
+--- a/include/boost/nowide/cenv.hpp
++++ b/include/boost/nowide/cenv.hpp
+@@ -101,7 +101,7 @@ namespace nowide {
+     {
+         char const *key = string;
+         char const *key_end = string;
+-        while(*key_end!='=' && key_end!='\0')
++        while(*key_end!='=' && *key_end!='\0')
+             key_end++;
+         if(*key_end == '\0')
+             return -1;

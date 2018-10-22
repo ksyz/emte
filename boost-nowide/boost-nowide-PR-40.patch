@@ -1,0 +1,186 @@
+From 25d37219a54605740cf9865dcb40282e2a6a7e47 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Fr=C3=A9d=C3=A9ric=20Bron?= <frederic.bron@m4x.org>
+Date: Mon, 18 Jun 2018 11:05:54 +0200
+Subject: [PATCH] Include C headers with the C++ version like <cstdio> instead
+ of <stdio.h>.
+
+Fixes issue #36 and #37.
+---
+ include/boost/nowide/cenv.hpp        | 2 +-
+ include/boost/nowide/cstdio.hpp      | 3 +--
+ include/boost/nowide/filebuf.hpp     | 2 +-
+ include/boost/nowide/stackstring.hpp | 2 +-
+ include/boost/nowide/system.hpp      | 4 ++--
+ include/boost/nowide/windows.hpp     | 2 +-
+ src/iostream.cpp                     | 2 +-
+ standalone/scoped_ptr.hpp            | 2 +-
+ standalone/utf.hpp                   | 2 +-
+ test/test_codecvt.cpp                | 4 ++--
+ test/test_stdio.cpp                  | 2 +-
+ test/test_system.cpp                 | 2 +-
+ 12 files changed, 14 insertions(+), 15 deletions(-)
+
+diff --git a/include/boost/nowide/cenv.hpp b/include/boost/nowide/cenv.hpp
+index 5f6d084..49a120f 100644
+--- a/include/boost/nowide/cenv.hpp
++++ b/include/boost/nowide/cenv.hpp
+@@ -10,7 +10,7 @@
+ 
+ #include <string>
+ #include <stdexcept>
+-#include <stdlib.h>
++#include <cstdlib>
+ #include <boost/config.hpp>
+ #include <boost/nowide/stackstring.hpp>
+ #include <vector>
+diff --git a/include/boost/nowide/cstdio.hpp b/include/boost/nowide/cstdio.hpp
+index d0bda97..db1fa87 100644
+--- a/include/boost/nowide/cstdio.hpp
++++ b/include/boost/nowide/cstdio.hpp
+@@ -9,11 +9,10 @@
+ #define BOOST_NOWIDE_CSTDIO_H_INCLUDED
+ 
+ #include <cstdio>
+-#include <stdio.h>
+ #include <boost/config.hpp>
+ #include <boost/nowide/convert.hpp>
+ #include <boost/nowide/stackstring.hpp>
+-#include <errno.h>
++#include <cerrno>
+ 
+ #ifdef BOOST_MSVC
+ #  pragma warning(push)
+diff --git a/include/boost/nowide/filebuf.hpp b/include/boost/nowide/filebuf.hpp
+index 2d6f4a4..ad7301c 100644
+--- a/include/boost/nowide/filebuf.hpp
++++ b/include/boost/nowide/filebuf.hpp
+@@ -13,7 +13,7 @@
+ #include <boost/nowide/stackstring.hpp>
+ #include <fstream>
+ #include <streambuf>
+-#include <stdio.h>
++#include <cstdio>
+ 
+ #ifdef BOOST_MSVC
+ #  pragma warning(push)
+diff --git a/include/boost/nowide/stackstring.hpp b/include/boost/nowide/stackstring.hpp
+index 948a22f..8563127 100644
+--- a/include/boost/nowide/stackstring.hpp
++++ b/include/boost/nowide/stackstring.hpp
+@@ -8,7 +8,7 @@
+ #ifndef BOOST_NOWIDE_DETAILS_WIDESTR_H_INCLUDED
+ #define BOOST_NOWIDE_DETAILS_WIDESTR_H_INCLUDED
+ #include <boost/nowide/convert.hpp>
+-#include <string.h>
++#include <cstring>
+ #include <algorithm>
+ 
+ namespace boost {
+diff --git a/include/boost/nowide/system.hpp b/include/boost/nowide/system.hpp
+index a1fc975..d561f67 100644
+--- a/include/boost/nowide/system.hpp
++++ b/include/boost/nowide/system.hpp
+@@ -8,8 +8,8 @@
+ #ifndef BOOST_NOWIDE_CSTDLIB_HPP
+ #define BOOST_NOWIDE_CSTDLIB_HPP
+ 
+-#include <stdlib.h>
+-#include <errno.h>
++#include <cstdlib>
++#include <cerrno>
+ #include <boost/nowide/stackstring.hpp>
+ namespace boost {
+ namespace nowide {
+diff --git a/include/boost/nowide/windows.hpp b/include/boost/nowide/windows.hpp
+index 164ed55..1ba274f 100644
+--- a/include/boost/nowide/windows.hpp
++++ b/include/boost/nowide/windows.hpp
+@@ -8,7 +8,7 @@
+ #ifndef BOOST_NOWIDE_WINDOWS_HPP_INCLUDED
+ #define BOOST_NOWIDE_WINDOWS_HPP_INCLUDED
+ 
+-#include <stddef.h>
++#include <cstddef>
+ 
+ #ifdef BOOST_NOWIDE_USE_WINDOWS_H
+ #include <windows.h>
+diff --git a/src/iostream.cpp b/src/iostream.cpp
+index 19bee11..13100ec 100644
+--- a/src/iostream.cpp
++++ b/src/iostream.cpp
+@@ -8,7 +8,7 @@
+ #define BOOST_NOWIDE_SOURCE
+ #include <boost/nowide/iostream.hpp>
+ #include <boost/nowide/convert.hpp>
+-#include <stdio.h>
++#include <cstdio>
+ #include <vector>
+ 
+ #ifdef BOOST_WINDOWS
+diff --git a/standalone/scoped_ptr.hpp b/standalone/scoped_ptr.hpp
+index 92410e2..1d57e78 100644
+--- a/standalone/scoped_ptr.hpp
++++ b/standalone/scoped_ptr.hpp
+@@ -12,7 +12,7 @@
+ //  http://www.boost.org/libs/smart_ptr/scoped_ptr.htm
+ //
+ 
+-#include <assert.h>
++#include <cassert>
+ 
+ namespace nowide
+ {
+diff --git a/standalone/utf.hpp b/standalone/utf.hpp
+index 55dc2cc..783b7e6 100644
+--- a/standalone/utf.hpp
++++ b/standalone/utf.hpp
+@@ -19,7 +19,7 @@ namespace utf {
+ }
+ }
+ #else
+-#include <stdint.h>
++#include <cstdint>
+ #endif
+ 
+ namespace nowide {
+diff --git a/test/test_codecvt.cpp b/test/test_codecvt.cpp
+index 150f411..ec26742 100644
+--- a/test/test_codecvt.cpp
++++ b/test/test_codecvt.cpp
+@@ -9,8 +9,8 @@
+ #include <locale>
+ #include <iostream>
+ #include <iomanip>
+-#include <string.h>
+-#include <memory.h>
++#include <cstring>
++#include <cmemory>
+ #include "test.hpp"
+ 
+ static char const *utf8_name = "\xf0\x9d\x92\x9e-\xD0\xBF\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82-\xE3\x82\x84\xE3\x81\x82.txt";
+diff --git a/test/test_stdio.cpp b/test/test_stdio.cpp
+index eed4d47..9817ae5 100644
+--- a/test/test_stdio.cpp
++++ b/test/test_stdio.cpp
+@@ -8,7 +8,7 @@
+ 
+ #include <boost/nowide/cstdio.hpp>
+ #include <iostream>
+-#include <string.h>
++#include <cstring>
+ #include "test.hpp"
+ 
+ #ifdef BOOST_MSVC
+diff --git a/test/test_system.cpp b/test/test_system.cpp
+index aa14b56..0b91101 100644
+--- a/test/test_system.cpp
++++ b/test/test_system.cpp
+@@ -11,7 +11,7 @@
+ #include <boost/nowide/cenv.hpp>
+ #include <iostream>
+ #include "test.hpp"
+-#include <stdio.h>
++#include <cstdio>
+ 
+ int main(int argc,char **argv,char **env)
+ {

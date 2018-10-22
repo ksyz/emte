@@ -1,0 +1,748 @@
+From c4beea652895fa93e27662e7404208174b55ad90 Mon Sep 17 00:00:00 2001
+From: Flamefire <git@grundis.de>
+Date: Sun, 1 Oct 2017 14:42:33 +1300
+Subject: [PATCH 1/4] Add proper CMake build files
+
+---
+ CMakeLists.txt                        |  18 ++++++
+ standalone/MinGW.cmake => MinGW.cmake |   0
+ src/CMakeLists.txt                    |  99 ++++++++++++++++++++++++++++++++
+ standalone/CMakeLists.txt             | 104 ----------------------------------
+ standalone/convert                    |  29 +++++-----
+ standalone/run_convert_and_build.sh   |   4 +-
+ test/CMakeLists.txt                   |  67 ++++++++++++++++++++++
+ 7 files changed, 199 insertions(+), 122 deletions(-)
+ create mode 100644 CMakeLists.txt
+ rename standalone/MinGW.cmake => MinGW.cmake (100%)
+ create mode 100644 src/CMakeLists.txt
+ delete mode 100644 standalone/CMakeLists.txt
+ create mode 100644 test/CMakeLists.txt
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+new file mode 100644
+index 0000000..050acac
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,18 @@
++CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
++project(nowide)
++cmake_policy(SET CMP0022 OLD)
++
++if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
++elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
++	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
++elseif(MSVC)
++	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /W3")
++endif()
++
++# Make sure all binarys (especially exe/dll) are in one directory for tests to work
++set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
++
++add_subdirectory(src)
++enable_testing()
++add_subdirectory(test)
+diff --git a/standalone/MinGW.cmake b/MinGW.cmake
+similarity index 100%
+rename from standalone/MinGW.cmake
+rename to MinGW.cmake
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+new file mode 100644
+index 0000000..f817c9e
+--- /dev/null
++++ b/src/CMakeLists.txt
+@@ -0,0 +1,99 @@
++include(GNUInstallDirs)
++
++option(NOWIDE_USE_BOOST_FILESYSTEM "Build with support for boost filesystem. Ignored for standalone version")
++
++option(NOWIDE_BUILD_SHARED "Build shared library" ON)
++option(NOWIDE_BUILD_STATIC "Build static library" ON)
++
++# Get path to nowide
++get_filename_component(NOWIDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
++# Find out if we are beeing build as standalone or boost version
++if(EXISTS ${NOWIDE_DIR}/include/nowide)
++	set(NOWIDE_STANDALONE ON CACHE INTERNAL "Build without boost")
++	set(NOWIDE_HEADER_DIR ${NOWIDE_DIR}/include/nowide)
++else()
++	set(NOWIDE_STANDALONE OFF CACHE INTERNAL "Build with boost")
++	set(NOWIDE_HEADER_DIR ${NOWIDE_DIR}/include/boost/nowide)
++endif()
++
++# Using glob here is ok as it is only for headers
++file(GLOB NOWIDE_HEADERS ${NOWIDE_HEADER_DIR}/*.hpp)
++
++if(NOT NOWIDE_STANDALONE)
++	# Default boost libs are static on self-build msvc versions and dynamic in the linux package repos
++	if(MSVC AND "${Boost_USE_STATIC_LIBS}" STREQUAL "")
++		set(Boost_USE_STATIC_LIBS ON)
++	endif()
++
++	find_package(Boost 1.55 REQUIRED COMPONENTS Locale)
++	if(NOWIDE_USE_BOOST_FILESYSTEM)
++		find_package(Boost 1.55 REQUIRED COMPONENTS Filesystem System)
++	endif()
++	# Can be replaced in CMake 2.8.12
++	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
++endif()
++
++# Can be replaced in CMake 2.8.12
++include_directories(${NOWIDE_DIR}/include)
++
++if(NOWIDE_BUILD_SHARED)
++	add_library(nowide SHARED iostream.cpp ${NOWIDE_HEADERS})
++	set_target_properties(nowide PROPERTIES VERSION 0.0.0 SOVERSION 0)
++
++	# Not required for CMake 2.8
++	# set_target_properties(nowide PROPERTIES CLEAN_DIRECT_OUTPUT 1)
++
++	# Requires CMake 2.8.12
++	# target_include_directories(nowide PUBLIC ${NOWIDE_DIR}/include)
++	if(NOWIDE_STANDALONE)
++		set_property(TARGET nowide PROPERTY COMPILE_DEFINITIONS NOWIDE_EXPORT NOWIDE_SOURCE)
++		# Better in CMake 2.8.12
++		# target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT PRIVATE NOWIDE_SOURCE)
++	else()
++		set_property(TARGET nowide PROPERTY COMPILE_DEFINITIONS BOOST_NOWIDE_DYN_LINK NOWIDE_SOURCE)
++		# Better in CMake 2.8.12
++		# target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_DYN_LINK BOOST_NOWIDE_NO_LIB PRIVATE BOOST_NOWIDE_SOURCE)
++		# target_include_directories(nowide SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
++		# In CMake 2.8.12 replace LINK_INTERFACE_LIBRARIES by INTERFACE and remove policy CMP0022
++		target_link_libraries(nowide LINK_INTERFACE_LIBRARIES ${Boost_LOCALE_LIBRARY})
++		if(NOWIDE_USE_BOOST_FILESYSTEM)
++		# Requires CMake 2.8.12
++		#	target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
++			target_link_libraries(nowide LINK_INTERFACE_LIBRARIES ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
++		endif()
++	endif()
++
++	install(TARGETS nowide
++			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
++endif()
++
++if(NOWIDE_BUILD_STATIC)
++	add_library(nowide-static STATIC iostream.cpp ${NOWIDE_HEADERS})
++	# Rename to libnowide and enable linking into shared libs
++	set_target_properties(nowide-static PROPERTIES OUTPUT_NAME "nowide" PREFIX "lib" POSITION_INDEPENDENT_CODE ON)
++
++	# Not required for CMake 2.8
++	# set_target_properties(nowide-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
++
++	# Requires CMake 2.8.12
++	# target_include_directories(nowide-static PUBLIC ${NOWIDE_DIR}/include)
++	if(NOT NOWIDE_STANDALONE)
++		# Requires CMake 2.8.12
++		# target_include_directories(nowide-static SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
++		# target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_NO_LIB)
++		target_link_libraries(nowide-static ${Boost_LOCALE_LIBRARY})
++		if(NOWIDE_USE_BOOST_FILESYSTEM)
++		# Requires CMake 2.8.12
++		#	target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
++			target_link_libraries(nowide-static ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
++		endif()
++	endif()
++	install(TARGETS nowide-static
++			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
++endif()
++
++install(DIRECTORY ${NOWIDE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+\ No newline at end of file
+diff --git a/standalone/CMakeLists.txt b/standalone/CMakeLists.txt
+deleted file mode 100644
+index edaef85..0000000
+--- a/standalone/CMakeLists.txt
++++ /dev/null
+@@ -1,104 +0,0 @@
+-cmake_minimum_required(VERSION 2.6)
+-
+-include_directories(.)
+-enable_testing()
+-
+-option(RUN_WITH_WINE		"Use wine to run tests" OFF)
+-
+-
+-if(NOT LIBDIR)
+-	set(LIBDIR lib CACHE STRING "Library installation directory" FORCE)
+-endif()
+-
+-if(CMAKE_COMPILER_IS_GNUCXX)
+-	set(CXX_FLAGS "-Wall -Wextra")
+-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+-	set(CXX_FLAGS "-Wall -Wextra")
+-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+-	set(CXX_FLAGS "-Wall")
+-elseif(MSVC)
+-	set(CXX_FLAGS "/EHsc /W3")
+-endif()
+-
+-if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+-	if(MSVC)
+-		set(NOWIDE_SUFFIX "-d")
+-	endif()
+-endif()
+-
+-
+-
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}")
+-
+-set(NOWIDE_TESTS
+-    test_convert
+-    test_stdio
+-    test_fstream
+-    )
+-
+-foreach(TEST ${NOWIDE_TESTS})
+-    add_executable(${TEST} test/${TEST}.cpp)
+-    if(RUN_WITH_WINE)
+-       add_test(NAME ${TEST} WORKING_DIRECTORY ${CMAKE_BUILD_DIR} COMMAND wine ./${TEST}.exe)
+-    else()
+-       add_test(${TEST} ${TEST})
+-    endif()
+-endforeach()
+-
+-add_library(nowide SHARED src/iostream.cpp)
+-set_target_properties(nowide	PROPERTIES VERSION 0.0.0 SOVERSION 0)
+-set_target_properties(nowide 	PROPERTIES
+-				CLEAN_DIRECT_OUTPUT 1
+-				OUTPUT_NAME "nowide${NOWIDE_SUFFIX}"
+-			)
+-
+-add_library(nowide-static STATIC src/iostream.cpp)
+-set_target_properties(nowide-static PROPERTIES
+-				CLEAN_DIRECT_OUTPUT 1
+-				OUTPUT_NAME "nowide${NOWIDE_SUFFIX}"
+-			)
+-
+-if(MSVC)
+-	set_target_properties(nowide-static PROPERTIES PREFIX "lib")
+-endif()
+-
+-add_executable(test_iostream_shared test/test_iostream.cpp)
+-set_target_properties(nowide PROPERTIES COMPILE_DEFINITIONS DLL_EXPORT)
+-set_target_properties(test_iostream_shared PROPERTIES COMPILE_DEFINITIONS DLL_EXPORT)
+-target_link_libraries(test_iostream_shared nowide)
+-
+-add_executable(test_iostream_static test/test_iostream.cpp)
+-target_link_libraries(test_iostream_static nowide-static)
+-
+-add_executable(test_system test/test_system.cpp)
+-
+-
+-add_executable(test_env_proto test/test_env.cpp)
+-add_executable(test_env_win test/test_env.cpp)
+-set_target_properties(test_env_win PROPERTIES COMPILE_DEFINITIONS NOWIDE_TEST_INCLUDE_WINDOWS)
+-
+-set(OTHER_TESTS test_iostream_shared test_iostream_static test_env_win test_env_proto)
+-
+-if(RUN_WITH_WINE)
+-	foreach(T ${OTHER_TESTS})
+-		add_test(NAME ${T} WORKING_DIRECTORY ${CMAKE_BUILD_DIR} COMMAND wine ./${T}.exe)
+-	endforeach()
+-
+-	add_test(NAME test_system_n WORKING_DIRECTORY ${CMAKE_BUILD_DIR} COMMAND wine ./test_system.exe "-n")
+-	add_test(NAME test_system_w WORKING_DIRECTORY ${CMAKE_BUILD_DIR} COMMAND wine ./test_system.exe "-w")
+-else()
+-	foreach(T ${OTHER_TESTS})
+-		add_test(${T} ${T})
+-	endforeach()
+-
+-	add_test(test_system_n test_system "-n")
+-	add_test(test_system_w test_system "-w")
+-endif()
+-
+-install(TARGETS nowide nowide-static
+-	RUNTIME DESTINATION bin
+-	LIBRARY DESTINATION ${LIBDIR}
+-	ARCHIVE DESTINATION ${LIBDIR})
+-
+-install(DIRECTORY nowide DESTINATION include)
+-
+diff --git a/standalone/convert b/standalone/convert
+index bd03dde..3a079b9 100755
+--- a/standalone/convert
++++ b/standalone/convert
+@@ -1,17 +1,16 @@
+ #!/bin/bash
+ 
+-rm -fr nowide nowide_standalone nowide_standalone.zip boost_nowide boost_nowide.zip
+-mkdir -p nowide/nowide
+-mkdir -p nowide/src
+-mkdir -p nowide/test
++rm -fr nowide_standalone nowide_standalone.zip
++mkdir -p nowide_standalone/include/nowide
++mkdir -p nowide_standalone/src
++mkdir -p nowide_standalone/test
+ 
+-cp ../include/boost/nowide/*.hpp nowide/nowide
+-cp ../src/*.cpp nowide/src
+-cp ../test/*.cpp ../test/*.hpp nowide/test
+-cp ./*.hpp nowide/nowide/
+-
+-SOURCES="nowide/test/* nowide/src/* nowide/nowide/*"
++cp ../include/boost/nowide/*.hpp nowide_standalone/include/nowide
++cp ../src/*.cpp nowide_standalone/src
++cp ../test/*.cpp ../test/*.hpp nowide_standalone/test
++cp ./*.hpp nowide_standalone/include/nowide/
+ 
++SOURCES="nowide_standalone/test/* nowide_standalone/src/* nowide_standalone/include/nowide/*"
+ 
+ sed 's/BOOST_NOWIDE_/NOWIDE_/g' -i $SOURCES
+ sed 's/BOOST_/NOWIDE_/g' -i $SOURCES
+@@ -25,10 +24,8 @@ sed 's/<boost\/locale\//<nowide\//g' -i $SOURCES
+ sed 's/<boost\/nowide\//<nowide\//g' -i $SOURCES
+ sed 's/<boost\//<nowide\//g' -i $SOURCES
+ 
+-cp CMakeLists.txt nowide/
+-cp -a nowide nowide_standalone
++cp ../CMakeLists.txt nowide_standalone
++cp ../MinGW.cmake nowide_standalone
++cp ../src/CMakeLists.txt nowide_standalone/src
++cp ../test/CMakeLists.txt nowide_standalone/test
+ zip -r nowide_standalone.zip  nowide_standalone
+-
+-#mkdir boost_nowide
+-#cp -a ../boost ../libs boost_nowide
+-#zip -r boost_nowide.zip boost_nowide
+diff --git a/standalone/run_convert_and_build.sh b/standalone/run_convert_and_build.sh
+index 6f3dce3..0116dd4 100755
+--- a/standalone/run_convert_and_build.sh
++++ b/standalone/run_convert_and_build.sh
+@@ -4,11 +4,11 @@ export WINEPATH="/usr/lib/gcc/i686-w64-mingw32/5.3-win32/;/usr/lib/gcc/i686-w64-
+ rm -fr /tmp/nwlin /tmp/nw
+ 
+ pushd .
+-./convert && mkdir nowide/build && cd nowide/build && cmake -DCMAKE_TOOLCHAIN_FILE=../../MinGW.cmake -DCMAKE_INSTALL_PREFIX=/tmp/nw -DRUN_WITH_WINE=ON .. && make && make test && make install
++./convert && mkdir nowide_standalone/build && cd nowide_standalone/build && cmake -DCMAKE_TOOLCHAIN_FILE=MinGW.cmake -DCMAKE_INSTALL_PREFIX=/tmp/nw -DRUN_WITH_WINE=ON .. && make && make test && make install
+ popd 
+ 
+ pushd .
+-./convert && mkdir nowide/build && cd nowide/build && cmake -DLIBDIR=lin64 -DCMAKE_INSTALL_PREFIX=/tmp/nwlin .. && make && make test && make install
++./convert && mkdir nowide_standalone/build && cd nowide_standalone/build && cmake -DCMAKE_INSTALL_PREFIX=/tmp/nwlin .. && make && make test && make install
+ popd
+ 
+ 
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+new file mode 100644
+index 0000000..b7d46c3
+--- /dev/null
++++ b/test/CMakeLists.txt
+@@ -0,0 +1,67 @@
++
++option(RUN_WITH_WINE "Use wine to run tests" OFF)
++
++# CMake 2.8.12: Executables linking to nowide get their include paths automatically
++# The others need it explicitely (until CMake 3.0.0 which could provide an INTERFACE library to "link" against)
++# Note: One could link against nowide-static which is empty on non-windows builds
++include_directories(../include)
++if(NOT NOWIDE_STANDALONE)
++	find_package(Boost 1.55 REQUIRED)
++	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
++endif()
++
++# Disable auto-link (non-default name used)
++add_definitions(-DBOOST_NOWIDE_NO_LIB)
++
++set(NOWIDE_TESTS
++    test_convert
++    test_stdio
++    test_fstream
++    )
++
++foreach(TEST ${NOWIDE_TESTS})
++    add_executable(${TEST} ${TEST}.cpp)
++    if(RUN_WITH_WINE)
++       add_test(NAME ${TEST} COMMAND wine $<TARGET_FILE:${TEST}>)
++    else()
++       add_test(NAME ${TEST} COMMAND ${TEST})
++    endif()
++endforeach()
++
++add_executable(test_iostream_shared test_iostream.cpp)
++target_link_libraries(test_iostream_shared nowide)
++# Automatic in CMake 2.8.12
++set_property(TARGET test_iostream_shared PROPERTY COMPILE_DEFINITIONS NOWIDE_EXPORT BOOST_NOWIDE_DYN_LINK)
++
++add_executable(test_iostream_static test_iostream.cpp)
++target_link_libraries(test_iostream_static nowide-static)
++
++add_executable(test_system test_system.cpp)
++add_executable(test_env_proto test_env.cpp)
++add_executable(test_env_win test_env.cpp)
++set_target_properties(test_env_win PROPERTIES COMPILE_DEFINITIONS NOWIDE_TEST_INCLUDE_WINDOWS)
++
++set(NOWIDE_OTHER_TESTS test_iostream_shared test_iostream_static test_env_win test_env_proto)
++if(NOT NOWIDE_STANDALONE AND NOWIDE_USE_BOOST_FILESYSTEM)
++    add_executable(test_fs test_fs.cpp)
++	# Not required in CMake 2.8.12 if linking against nowide
++	set_target_properties(test_fs PROPERTIES COMPILE_DEFINITIONS BOOST_NOWIDE_USE_FILESYSTEM)
++    target_link_libraries(test_fs nowide-static) # Not acutally required but pulls in boost deps
++    list(APPEND OTHER_TESTS test_fs)
++endif()
++
++if(RUN_WITH_WINE)
++	foreach(TEST ${NOWIDE_OTHER_TESTS})
++		add_test(NAME ${TEST} COMMAND wine $<TARGET_FILE:${TEST}>)
++	endforeach()
++
++	add_test(NAME test_system_n COMMAND wine $<TARGET_FILE:test_system> "-n")
++	add_test(NAME test_system_w COMMAND wine $<TARGET_FILE:test_system> "-w")
++else()
++	foreach(TEST ${NOWIDE_OTHER_TESTS})
++		add_test(NAME ${TEST} COMMAND ${TEST})
++	endforeach()
++
++	add_test(NAME test_system_n COMMAND test_system "-n")
++	add_test(NAME test_system_w COMMAND test_system "-w")
++endif()
+
+From 755128af4c42f4862142ef6e93204b97a35da1f2 Mon Sep 17 00:00:00 2001
+From: Flamefire <git@grundis.de>
+Date: Mon, 2 Oct 2017 08:42:11 +1300
+Subject: [PATCH 2/4] Update to CMake 2.8.12
+
+---
+ CMakeLists.txt      |   5 ++-
+ src/CMakeLists.txt  | 104 ++++++++++++++++++++++++++++------------------------
+ test/CMakeLists.txt |  31 ++++++----------
+ 3 files changed, 72 insertions(+), 68 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 050acac..b540fdc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,6 +1,5 @@
+-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
++CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+ project(nowide)
+-cmake_policy(SET CMP0022 OLD)
+ 
+ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+ 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+@@ -13,6 +12,8 @@ endif()
+ # Make sure all binarys (especially exe/dll) are in one directory for tests to work
+ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+ 
++set(NOWIDE_BUILD_SHARED ON)
++set(NOWIDE_BUILD_STATIC ON)
+ add_subdirectory(src)
+ enable_testing()
+ add_subdirectory(test)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index f817c9e..deee9f1 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -1,65 +1,81 @@
+-include(GNUInstallDirs)
++# Builds the libraries for Boost-Nowide
++# Automatically detects if build as standalone or as "part of boost" (with boost namespace)
++#
++# Options:
++# NOWIDE_USE_BOOST_FILESYSTEM
++# NOWIDE_BUILD_SHARED           Build target nowide
++# NOWIDE_BUILD_STATIC           Build target nowide-static
++#
++# Exported cache variables:
++# NOWIDE_INCLUDE_DIRS
++#
++# Default is to build the static library on windows and the dynamic library on other systems (Similar to boost)
++# You can also build both at the same time.
++#
++# Non-standalone version:
++# Setting NOWIDE_USE_BOOST_FILESYSTEM is not required to accept boost::filesystem::path but it adds the Boost.Filesystem dependency and defines
++# -DBOOST_NOWIDE_USE_FILESYSTEM for targets linking agains nowide. You can also define this manually.
++# Linking against the shared library (nowide) requires -DBOOST_NOWIDE_DYN_LINK on windows. It is also adviced to define -D BOOST_NOWIDE_NO_LIB
++# to disable autolinking as the generated library name is non-default
++#
++# Standalone version:
++# NOWIDE_USE_BOOST_FILESYSTEM is ignored.
++# Linking against the shared library (nowide) requires -DNOWIDE_EXPORT on windows.
+ 
+-option(NOWIDE_USE_BOOST_FILESYSTEM "Build with support for boost filesystem. Ignored for standalone version")
++include(GNUInstallDirs)
++include(CMakeDependentOption)
+ 
+-option(NOWIDE_BUILD_SHARED "Build shared library" ON)
+-option(NOWIDE_BUILD_STATIC "Build static library" ON)
++if(WIN32)
++    option(NOWIDE_BUILD_SHARED "Build shared library" OFF)
++    option(NOWIDE_BUILD_STATIC "Build static library" ON)
++else()
++    option(NOWIDE_BUILD_SHARED "Build shared library" ON)
++    option(NOWIDE_BUILD_STATIC "Build static library" OFF)
++endif()
+ 
+ # Get path to nowide
+ get_filename_component(NOWIDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
++set(NOWIDE_INCLUDE_DIR ${NOWIDE_DIR}/include)
++set(NOWIDE_INCLUDE_DIRS ${NOWIDE_INCLUDE_DIR} CACHE PATH "Path to nowide includes")
+ # Find out if we are beeing build as standalone or boost version
+-if(EXISTS ${NOWIDE_DIR}/include/nowide)
++if(EXISTS ${NOWIDE_INCLUDE_DIR}/nowide)
+ 	set(NOWIDE_STANDALONE ON CACHE INTERNAL "Build without boost")
+-	set(NOWIDE_HEADER_DIR ${NOWIDE_DIR}/include/nowide)
++	set(NOWIDE_HEADER_DIR ${NOWIDE_INCLUDE_DIR}/nowide)
+ else()
+-	set(NOWIDE_STANDALONE OFF CACHE INTERNAL "Build with boost")
+-	set(NOWIDE_HEADER_DIR ${NOWIDE_DIR}/include/boost/nowide)
+-endif()
+-
+-# Using glob here is ok as it is only for headers
+-file(GLOB NOWIDE_HEADERS ${NOWIDE_HEADER_DIR}/*.hpp)
+-
+-if(NOT NOWIDE_STANDALONE)
+ 	# Default boost libs are static on self-build msvc versions and dynamic in the linux package repos
+ 	if(MSVC AND "${Boost_USE_STATIC_LIBS}" STREQUAL "")
+ 		set(Boost_USE_STATIC_LIBS ON)
+ 	endif()
+ 
+-	find_package(Boost 1.55 REQUIRED COMPONENTS Locale)
+ 	if(NOWIDE_USE_BOOST_FILESYSTEM)
+ 		find_package(Boost 1.55 REQUIRED COMPONENTS Filesystem System)
++    else()
++        find_package(Boost 1.55 REQUIRED)
+ 	endif()
+-	# Can be replaced in CMake 2.8.12
+-	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
++	set(NOWIDE_STANDALONE OFF CACHE INTERNAL "Build with boost")
++	set(NOWIDE_HEADER_DIR ${NOWIDE_INCLUDE_DIR}/boost/nowide)
+ endif()
+ 
+-# Can be replaced in CMake 2.8.12
+-include_directories(${NOWIDE_DIR}/include)
++CMAKE_DEPENDENT_OPTION(NOWIDE_USE_BOOST_FILESYSTEM "Build with support for boost filesystem" OFF
++                       "NOT NOWIDE_STANDALONE" OFF)
++
++# Using glob here is ok as it is only for headers
++file(GLOB NOWIDE_HEADERS ${NOWIDE_HEADER_DIR}/*.hpp)
+ 
+ if(NOWIDE_BUILD_SHARED)
+ 	add_library(nowide SHARED iostream.cpp ${NOWIDE_HEADERS})
+ 	set_target_properties(nowide PROPERTIES VERSION 0.0.0 SOVERSION 0)
+ 
+-	# Not required for CMake 2.8
+-	# set_target_properties(nowide PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+-
+-	# Requires CMake 2.8.12
+-	# target_include_directories(nowide PUBLIC ${NOWIDE_DIR}/include)
++	target_include_directories(nowide PUBLIC ${NOWIDE_DIR}/include)
+ 	if(NOWIDE_STANDALONE)
+-		set_property(TARGET nowide PROPERTY COMPILE_DEFINITIONS NOWIDE_EXPORT NOWIDE_SOURCE)
+-		# Better in CMake 2.8.12
+-		# target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT PRIVATE NOWIDE_SOURCE)
++		target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT PRIVATE NOWIDE_SOURCE)
+ 	else()
+-		set_property(TARGET nowide PROPERTY COMPILE_DEFINITIONS BOOST_NOWIDE_DYN_LINK NOWIDE_SOURCE)
+-		# Better in CMake 2.8.12
+-		# target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_DYN_LINK BOOST_NOWIDE_NO_LIB PRIVATE BOOST_NOWIDE_SOURCE)
+-		# target_include_directories(nowide SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
+-		# In CMake 2.8.12 replace LINK_INTERFACE_LIBRARIES by INTERFACE and remove policy CMP0022
+-		target_link_libraries(nowide LINK_INTERFACE_LIBRARIES ${Boost_LOCALE_LIBRARY})
++		target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_DYN_LINK BOOST_NOWIDE_NO_LIB PRIVATE BOOST_NOWIDE_SOURCE)
++		target_include_directories(nowide SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
++		#target_link_libraries(nowide INTERFACE ${Boost_LOCALE_LIBRARY})
+ 		if(NOWIDE_USE_BOOST_FILESYSTEM)
+-		# Requires CMake 2.8.12
+-		#	target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
+-			target_link_libraries(nowide LINK_INTERFACE_LIBRARIES ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
++			target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
++			target_link_libraries(nowide INTERFACE ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+ 		endif()
+ 	endif()
+ 
+@@ -74,19 +90,13 @@ if(NOWIDE_BUILD_STATIC)
+ 	# Rename to libnowide and enable linking into shared libs
+ 	set_target_properties(nowide-static PROPERTIES OUTPUT_NAME "nowide" PREFIX "lib" POSITION_INDEPENDENT_CODE ON)
+ 
+-	# Not required for CMake 2.8
+-	# set_target_properties(nowide-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+-
+-	# Requires CMake 2.8.12
+-	# target_include_directories(nowide-static PUBLIC ${NOWIDE_DIR}/include)
++	target_include_directories(nowide-static PUBLIC ${NOWIDE_DIR}/include)
+ 	if(NOT NOWIDE_STANDALONE)
+-		# Requires CMake 2.8.12
+-		# target_include_directories(nowide-static SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
+-		# target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_NO_LIB)
+-		target_link_libraries(nowide-static ${Boost_LOCALE_LIBRARY})
++		target_include_directories(nowide-static SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
++		target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_NO_LIB)
++		#target_link_libraries(nowide-static ${Boost_LOCALE_LIBRARY})
+ 		if(NOWIDE_USE_BOOST_FILESYSTEM)
+-		# Requires CMake 2.8.12
+-		#	target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
++            target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_USE_FILESYSTEM)
+ 			target_link_libraries(nowide-static ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
+ 		endif()
+ 	endif()
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index b7d46c3..824d689 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -1,18 +1,21 @@
+ 
+-option(RUN_WITH_WINE "Use wine to run tests" OFF)
++option(NOWIDE_RUN_WITH_WINE "Use wine to run tests" OFF)
++
++# Executables linking to nowide get their include paths automatically
++add_executable(test_iostream_shared test_iostream.cpp)
++target_link_libraries(test_iostream_shared nowide)
++
++add_executable(test_iostream_static test_iostream.cpp)
++target_link_libraries(test_iostream_static nowide-static)
+ 
+-# CMake 2.8.12: Executables linking to nowide get their include paths automatically
+ # The others need it explicitely (until CMake 3.0.0 which could provide an INTERFACE library to "link" against)
+ # Note: One could link against nowide-static which is empty on non-windows builds
+-include_directories(../include)
++include_directories(${NOWIDE_INCLUDE_DIRS})
+ if(NOT NOWIDE_STANDALONE)
+ 	find_package(Boost 1.55 REQUIRED)
+ 	include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+ endif()
+ 
+-# Disable auto-link (non-default name used)
+-add_definitions(-DBOOST_NOWIDE_NO_LIB)
+-
+ set(NOWIDE_TESTS
+     test_convert
+     test_stdio
+@@ -21,21 +24,13 @@ set(NOWIDE_TESTS
+ 
+ foreach(TEST ${NOWIDE_TESTS})
+     add_executable(${TEST} ${TEST}.cpp)
+-    if(RUN_WITH_WINE)
++    if(NOWIDE_RUN_WITH_WINE)
+        add_test(NAME ${TEST} COMMAND wine $<TARGET_FILE:${TEST}>)
+     else()
+        add_test(NAME ${TEST} COMMAND ${TEST})
+     endif()
+ endforeach()
+ 
+-add_executable(test_iostream_shared test_iostream.cpp)
+-target_link_libraries(test_iostream_shared nowide)
+-# Automatic in CMake 2.8.12
+-set_property(TARGET test_iostream_shared PROPERTY COMPILE_DEFINITIONS NOWIDE_EXPORT BOOST_NOWIDE_DYN_LINK)
+-
+-add_executable(test_iostream_static test_iostream.cpp)
+-target_link_libraries(test_iostream_static nowide-static)
+-
+ add_executable(test_system test_system.cpp)
+ add_executable(test_env_proto test_env.cpp)
+ add_executable(test_env_win test_env.cpp)
+@@ -44,13 +39,11 @@ set_target_properties(test_env_win PROPERTIES COMPILE_DEFINITIONS NOWIDE_TEST_IN
+ set(NOWIDE_OTHER_TESTS test_iostream_shared test_iostream_static test_env_win test_env_proto)
+ if(NOT NOWIDE_STANDALONE AND NOWIDE_USE_BOOST_FILESYSTEM)
+     add_executable(test_fs test_fs.cpp)
+-	# Not required in CMake 2.8.12 if linking against nowide
+-	set_target_properties(test_fs PROPERTIES COMPILE_DEFINITIONS BOOST_NOWIDE_USE_FILESYSTEM)
+-    target_link_libraries(test_fs nowide-static) # Not acutally required but pulls in boost deps
++    target_link_libraries(test_fs nowide-static) # Not acutally required but pulls in boost deps and compile definitions
+     list(APPEND OTHER_TESTS test_fs)
+ endif()
+ 
+-if(RUN_WITH_WINE)
++if(NOWIDE_RUN_WITH_WINE)
+ 	foreach(TEST ${NOWIDE_OTHER_TESTS})
+ 		add_test(NAME ${TEST} COMMAND wine $<TARGET_FILE:${TEST}>)
+ 	endforeach()
+
+From c2079fde12498ca436b4d545bd6dbf15e1ae75ec Mon Sep 17 00:00:00 2001
+From: Flamefire <git@grundis.de>
+Date: Wed, 4 Oct 2017 12:42:13 +1300
+Subject: [PATCH 3/4] Add option NOWIDE_SYSTEM_INCLUDE
+
+---
+ CMakeLists.txt     |  1 +
+ src/CMakeLists.txt | 13 +++++++++++--
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b540fdc..4d1bf33 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -14,6 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+ 
+ set(NOWIDE_BUILD_SHARED ON)
+ set(NOWIDE_BUILD_STATIC ON)
++set(NOWIDE_SYSTEM_INCLUDE OFF)
+ add_subdirectory(src)
+ enable_testing()
+ add_subdirectory(test)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index deee9f1..9ad1fe3 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -32,6 +32,7 @@ else()
+     option(NOWIDE_BUILD_SHARED "Build shared library" ON)
+     option(NOWIDE_BUILD_STATIC "Build static library" OFF)
+ endif()
++option(NOWIDE_SYSTEM_INCLUDE "Treat Boost.Nowide includes as system includes" ON)
+ 
+ # Get path to nowide
+ get_filename_component(NOWIDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+@@ -66,7 +67,11 @@ if(NOWIDE_BUILD_SHARED)
+ 	add_library(nowide SHARED iostream.cpp ${NOWIDE_HEADERS})
+ 	set_target_properties(nowide PROPERTIES VERSION 0.0.0 SOVERSION 0)
+ 
+-	target_include_directories(nowide PUBLIC ${NOWIDE_DIR}/include)
++    if(NOWIDE_SYSTEM_INCLUDE)
++        target_include_directories(nowide SYSTEM PUBLIC ${NOWIDE_INCLUDE_DIRS})
++    else()
++        target_include_directories(nowide PUBLIC ${NOWIDE_INCLUDE_DIRS})
++    endif()
+ 	if(NOWIDE_STANDALONE)
+ 		target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT PRIVATE NOWIDE_SOURCE)
+ 	else()
+@@ -90,7 +95,11 @@ if(NOWIDE_BUILD_STATIC)
+ 	# Rename to libnowide and enable linking into shared libs
+ 	set_target_properties(nowide-static PROPERTIES OUTPUT_NAME "nowide" PREFIX "lib" POSITION_INDEPENDENT_CODE ON)
+ 
+-	target_include_directories(nowide-static PUBLIC ${NOWIDE_DIR}/include)
++    if(NOWIDE_SYSTEM_INCLUDE)
++        target_include_directories(nowide-static SYSTEM PUBLIC ${NOWIDE_INCLUDE_DIRS})
++    else()
++        target_include_directories(nowide-static PUBLIC ${NOWIDE_INCLUDE_DIRS})
++    endif()
+ 	if(NOT NOWIDE_STANDALONE)
+ 		target_include_directories(nowide-static SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
+ 		target_compile_definitions(nowide-static PUBLIC BOOST_NOWIDE_NO_LIB)
+
+From 291c2929b5d791b4e7d71e879537955847f1c0c6 Mon Sep 17 00:00:00 2001
+From: Flamefire <git@grundis.de>
+Date: Fri, 6 Oct 2017 18:01:32 +1300
+Subject: [PATCH 4/4] Remove BOOST_NOWIDE_SOURCE definition from cmake
+
+---
+ src/CMakeLists.txt | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 9ad1fe3..5972a40 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -49,7 +49,7 @@ else()
+ 	endif()
+ 
+ 	if(NOWIDE_USE_BOOST_FILESYSTEM)
+-		find_package(Boost 1.55 REQUIRED COMPONENTS Filesystem System)
++		find_package(Boost 1.55 REQUIRED COMPONENTS filesystem system)
+     else()
+         find_package(Boost 1.55 REQUIRED)
+ 	endif()
+@@ -73,9 +73,9 @@ if(NOWIDE_BUILD_SHARED)
+         target_include_directories(nowide PUBLIC ${NOWIDE_INCLUDE_DIRS})
+     endif()
+ 	if(NOWIDE_STANDALONE)
+-		target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT PRIVATE NOWIDE_SOURCE)
++		target_compile_definitions(nowide PUBLIC NOWIDE_EXPORT)
+ 	else()
+-		target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_DYN_LINK BOOST_NOWIDE_NO_LIB PRIVATE BOOST_NOWIDE_SOURCE)
++		target_compile_definitions(nowide PUBLIC BOOST_NOWIDE_DYN_LINK BOOST_NOWIDE_NO_LIB)
+ 		target_include_directories(nowide SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
+ 		#target_link_libraries(nowide INTERFACE ${Boost_LOCALE_LIBRARY})
+ 		if(NOWIDE_USE_BOOST_FILESYSTEM)
