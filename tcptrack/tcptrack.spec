@@ -1,18 +1,14 @@
 Name:           tcptrack
-Version:        1.4.2
-Release:        10%{?dist}
+Version:        1.4.3
+Release:        2%{?dist}
 Summary:        Displays information about tcp connections on a network interface
 
-Group:          Applications/System
 License:        LGPLv2+
-URL:            http://www.rhythm.cx/~steve/devel/tcptrack/
-Source0:        http://www.rhythm.cx/~steve/devel/%{name}/release/%{version}/source/%{name}-%{version}.tar.gz
-#Increase text ui select timeout to 10000 usec, upstream agrees
-Patch0:         tcptrack-1.4.0-timeout.patch
-#Kick out -Werror from AM_CXXFLAGS
-Patch1:         tcptrack-1.4.2-no-werror.patch
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+URL:            https://github.com/bchretien/tcptrack
+Source0:        https://github.com/bchretien/tcptrack/archive/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
+BuildRequires:  gcc-c++
+BuildRequires:  gcc
 BuildRequires:  ncurses-devel
 BuildRequires:  libpcap-devel
 
@@ -25,32 +21,44 @@ source and destination addresses and ports, connection state, idle time,
 and bandwidth usage
 
 %prep
-%setup -q
-%patch0 -p1 -b .timeout
-%patch1 -p1
+%autosetup
 
 %build
 %configure
-make %{?_smp_mflags}
-
+%make_build
 
 %install
-rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
-
-
-%clean
-rm -rf $RPM_BUILD_ROOT
-
+%make_install
 
 %files
-%defattr(-,root,root,-)
-%doc AUTHORS ChangeLog COPYING NEWS README TODO
-%{_bindir}/tcptrack
-%{_mandir}/man1/tcptrack.1.gz
-
+%doc AUTHORS ChangeLog NEWS README TODO
+%license COPYING
+%{_bindir}/%{name}
+%{_mandir}/man*/%{name}.*
 
 %changelog
+* Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.3-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
+* Thu Mar 08 2018 Fabian Affolter <mail@fabian-affolter.ch> - 1.4.3-1
+- Fix BR
+- UPdate to new upstream version 1.4.3
+
+* Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.2-15
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
+* Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.2-14
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
+
+* Thu Jul 27 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.2-13
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
+
+* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.2-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
+* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.4.2-11
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
 * Fri Jun 19 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.4.2-10
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
 
