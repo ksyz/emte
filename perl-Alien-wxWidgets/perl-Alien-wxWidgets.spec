@@ -1,11 +1,12 @@
 Name:           perl-Alien-wxWidgets
 Version:        0.69
-Release:        4%{?dist}
+Release:        9%{?dist}
 Summary:        Building, finding and using wxWidgets binaries
 Group:          Development/Libraries
 License:        GPL+ or Artistic
-URL:            http://search.cpan.org/dist/Alien-wxWidgets/
-Source0:        http://search.cpan.org/CPAN/authors/id/M/MB/MBARBON/Alien-wxWidgets-%{version}.tar.gz
+URL:            https://metacpan.org/release/Alien-wxWidgets
+Source0:        https://cpan.metacpan.org/authors/id/M/MB/MBARBON/Alien-wxWidgets-%{version}.tar.gz
+BuildRequires:  gcc, gcc-c++
 BuildRequires:  wxGTK-devel
 BuildRequires:  wxGTK3-devel
 # A lot of stuff used by inc/My/Build/Base.pm.
@@ -72,6 +73,23 @@ chmod -R u+w $RPM_BUILD_ROOT/*
 
 
 %changelog
+* Tue Oct 16 2018 Michal Ingeli <mi@v3.sk> - 0.69-9
+- pulled changes from Fedora
+- changed links from cpan to metacpan
+- fixed EPEL wx-config detection
+
+* Mon Jul 23 2018 Tom Callaway <spot@fedoraproject.org> - 0.69-8
+- add BuildRequires: gcc, gcc-c++ to generate sane configs
+
+* Fri Jul 13 2018 Fedora Release Engineering <releng@fedoraproject.org> - 0.69-7
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
+* Fri Jun 29 2018 Jitka Plesnikova <jplesnik@redhat.com> - 0.69-6
+- Perl 5.28 rebuild
+
+* Thu Feb 08 2018 Fedora Release Engineering <releng@fedoraproject.org> - 0.69-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
 * Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 0.69-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
 
