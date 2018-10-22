@@ -1,12 +1,10 @@
-%global git_commit 2115961ef8903784bc9f652c48fdf8f2791364e0
-%global git_date 20160608
-%global git_short_commit %(echo %{git_commit} | cut -c -8)
-%global git_suffix %{git_date}git%{git_short_commit}
+%global git_commit 2492c20822ca6a49dce97967caf394b1d4b2c43e
+%global git_short_commit %(c=%{git_commit}; echo ${c:0:7})
 
 Name:             kalibrate-hackrf
 URL:              https://github.com/scateu/kalibrate-hackrf
 Version:          0.4.1
-Release:          6.%{git_suffix}%{?dist}
+Release:          7.%{git_short_commit}%{?dist}
 License:          BSD
 BuildRequires:    autoconf, automake, rtl-sdr-devel, fftw-devel
 BuildRequires:    libusbx-devel
@@ -43,6 +41,9 @@ mv %{buildroot}%{_bindir}/kal %{buildroot}%{_bindir}/kal-hackrf
 %{_bindir}/*
 
 %changelog
+* Wed Oct 17 2018 Michal Ingeli <mi@v3.sk> - 0.4.1-7
+- Latest git commit
+
 * Wed Jun 15 2016 Michal Ingeli <mi@v3.sk> - 0.4.1-6.20160608git2115961e
 - Re-fit for kalibrate-hackrf purpose
 - Added foreign to Makefile.AM to skip README checking
