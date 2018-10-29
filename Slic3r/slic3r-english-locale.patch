@@ -1,0 +1,12 @@
+diff --git a/slic3r.pl b/slic3r.pl
+index 11dc2fad..80e6dc76 100755
+--- a/slic3r.pl
++++ b/slic3r.pl
+@@ -13,6 +13,7 @@ use File::Basename qw(basename);
+ use Getopt::Long qw(:config no_auto_abbrev);
+ use List::Util qw(first);
+ use POSIX qw(setlocale LC_NUMERIC ceil);
++$ENV{LC_NUMERIC} = 'en_US.UTF-8';
+ use Slic3r;
+ use Slic3r::Geometry qw(epsilon X Y Z deg2rad);
+ use Time::HiRes qw(gettimeofday tv_interval);

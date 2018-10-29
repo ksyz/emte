@@ -1,0 +1,13 @@
+diff --git a/xs/Build.PL b/xs/Build.PL
+index 7d2556d..481cd36 100644
+--- a/xs/Build.PL
++++ b/xs/Build.PL
+@@ -27,7 +27,7 @@ if ($mswin) {
+ }
+ 
+ my @INC  = qw(-Isrc/libslic3r);
+-my @LIBS = $cpp_guess->is_msvc ? qw(-LIBPATH:src/libslic3r) : qw(-Lsrc/libslic3r);
++my @LIBS = $cpp_guess->is_msvc ? qw(-LIBPATH:src/libslic3r) : qw( -Lsrc/libslic3r -ladmesh -lpoly2tri );
+ 
+ # search for Boost in a number of places
+ my @boost_include = ();

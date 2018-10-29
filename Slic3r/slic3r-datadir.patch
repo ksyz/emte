@@ -1,0 +1,13 @@
+diff --git a/lib/Slic3r.pm b/lib/Slic3r.pm
+index e1445335c..304157a5d 100644
+--- a/lib/Slic3r.pm
++++ b/lib/Slic3r.pm
+@@ -47,7 +47,7 @@ my $varpath = decode_path($FindBin::Bin) . "/var";
+ if ($^O eq 'darwin' && !-d $varpath) {
+     $varpath = decode_path($FindBin::Bin) . "/../Resources/var";
+ }
+-our $var = sub { "$varpath/$_[0]" };
++our $var = sub { "/usr/share/slic3r/".$_[0] };
+ 
+ use Moo 1.003001;
+ 
