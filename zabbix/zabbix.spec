@@ -8,12 +8,12 @@
 %global srcname zabbix
 #%%global prerelease rc2
 %if ! 0%{?patchver}
-%define patchver 22
+%define patchver 24
 %endif
 
 Name:           zabbix
 Version:        3.0.%{patchver}
-Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 License:        GPLv2+
@@ -36,7 +36,7 @@ Source17:       %{srcname}-tmpfiles-zabbixsrv.conf
 Source9000:     README.zabbix-web-ro-database.txt
 
 # local rules for config files
-Patch0:         %{srcname}-3.0.13-config.patch
+Patch0:         %{srcname}-3.0.24-4-config.patch
 
 # local rules for config files - fonts
 Patch10:         %{srcname}-3.0.13-fonts-config.patch
@@ -138,7 +138,7 @@ Requires:			%{name} = %{version}-%{release}
 BuildArch:			noarch
 
 %description devel
-Develompent files to build zabbix loadable modules
+Development files to build zabbix loadable modules
 
 %package dbfiles-mysql
 Summary:             Zabbix database schemas, images, data and patches
@@ -318,9 +318,9 @@ Zabbix web frontend for PostgreSQL
 
 %prep
 %setup0 -q -n %{srcname}-%{version}%{?prerelease:.%{prerelease}}
-%patch0 -p1
+%patch0 -p1 -b .backup-config
 %patch10 -p1
-# % patch1 -p1
+## % patch1 -p1
 %patch4 -p1
 %patch9001 -p1
 
@@ -362,10 +362,10 @@ find database -name 'data.sql' -exec sed -i 's|/usr/bin/traceroute|/bin/tracerou
 sed -i \
     -e '\|^# LogFileSize=.*|a LogFileSize=0' \
     -e 's|^DBUser=root|DBUser=zabbix|' \
-    -e 's|^# DBSocket=/tmp/mysql.sock|# DBSocket=%{_sharedstatedir}/mysql/mysql.sock|' \
-    -e '\|^# ExternalScripts=\${datadir}/zabbix/externalscripts|a ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
-    -e '\|^# AlertScripts=\${datadir}/zabbix/alertscripts|a AlertScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
-    -e '\|^# TmpDir=\/tmp|a TmpDir=%{_sharedstatedir}/zabbixsrv/tmp' \
+    -e 's|^# DBSocket=.*|# DBSocket=%{_sharedstatedir}/mysql/mysql.sock|' \
+    -e '\|^# ExternalScripts=.*|a ExternalScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
+    -e '\|^# AlertScripts=.*|a AlertScripts=%{_sharedstatedir}/zabbixsrv/externalscripts' \
+    -e '\|^# TmpDir=.*|a TmpDir=%{_sharedstatedir}/zabbixsrv/tmp' \
     -e 's|/usr/local||' \
     -e 's|\${datadir}|/usr/share|' \
     conf/zabbix_agentd.conf conf/zabbix_proxy.conf conf/zabbix_server.conf
@@ -452,9 +452,9 @@ mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/log/zabbixsrv
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 
 # systemd tmpfiles
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d
-install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbix.conf
-install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
+mkdir -p $RPM_BUILD_ROOT%{_tmpfilesdir}
+install -m 0644 -p %{SOURCE9} $RPM_BUILD_ROOT%{_tmpfilesdir}/zabbix.conf
+install -m 0644 -p %{SOURCE17} $RPM_BUILD_ROOT%{_tmpfilesdir}/zabbixsrv.conf
 mkdir -p $RPM_BUILD_ROOT%{_rundir}
 install -d -m 0755 $RPM_BUILD_ROOT%{_rundir}/zabbix/
 install -d -m 0755 $RPM_BUILD_ROOT%{_rundir}/zabbixsrv/
@@ -717,7 +717,7 @@ fi
 %files server
 %doc misc/snmptrap/zabbix_trap_receiver.pl
 %attr(0755,zabbixsrv,zabbixsrv) %dir %{_rundir}/zabbixsrv/
-%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
+%{_tmpfilesdir}/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_server.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_server.conf
@@ -744,7 +744,7 @@ fi
 %files agent
 %doc conf/zabbix_agentd/*.conf
 %attr(0755,zabbix,zabbix) %dir %{_rundir}/zabbix/
-%{_prefix}/lib/tmpfiles.d/zabbix.conf
+%{_tmpfilesdir}/zabbix.conf
 %attr(0775,root,zabbix) %dir %{_localstatedir}/log/zabbix
 %config(noreplace) %{_sysconfdir}/zabbix_agentd.conf
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_agentd.conf
@@ -758,7 +758,7 @@ fi
 %files proxy
 %doc misc/snmptrap/zabbix_trap_receiver.pl
 %attr(0755,zabbixsrv,zabbixsrv) %dir %{_rundir}/zabbixsrv/
-%{_prefix}/lib/tmpfiles.d/zabbixsrv.conf
+%{_tmpfilesdir}/zabbixsrv.conf
 %attr(0640,root,zabbixsrv) %config(noreplace) %{_sysconfdir}/zabbix_proxy.conf
 %attr(0775,root,zabbixsrv) %dir %{_localstatedir}/log/zabbixsrv
 %config(noreplace) %{_sysconfdir}/%{srcname}/zabbix_proxy.conf
@@ -796,6 +796,18 @@ fi
 %files web-pgsql
 
 %changelog
+* Thu Nov 29 2018 Michal Ingeli <mi@v3.sk> - 3.0.24-2
+- Fixed PidFile path
+
+* Wed Nov 28 2018 Michal Ingeli <mi@v3.sk> - 3.0.24-1
+- New upstream release 3.0.24
+- Removed redundant changes from zabbix-3.0.24-config.patch 
+  to only modify php code. Rest is done by spec file anyway.
+- Changed path lib/tmpfiles.d to _tmpfilesdir macro
+
+* Thu Nov 15 2018 Michal Ingeli <mi@v3.sk> - 3.0.23-1
+- New upstream release 3.0.23
+
 * Mon Sep 17 2018 Michal Ingeli <mi@v3.sk> - 3.0.22-1
 - New upstream release 3.0.22
 

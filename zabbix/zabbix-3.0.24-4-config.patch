@@ -1,0 +1,65 @@
+diff -rup zabbix-3.0.24-orig/frontends/php/include/classes/core/CConfigFile.php zabbix-3.0.24/frontends/php/include/classes/core/CConfigFile.php
+--- zabbix-3.0.24-orig/frontends/php/include/classes/core/CConfigFile.php	2018-11-26 11:04:52.000000000 +0100
++++ zabbix-3.0.24/frontends/php/include/classes/core/CConfigFile.php	2018-11-27 16:52:34.625133919 +0100
+@@ -24,7 +24,7 @@ class CConfigFile {
+ 	const CONFIG_NOT_FOUND = 1;
+ 	const CONFIG_ERROR = 2;
+ 
+-	const CONFIG_FILE_PATH = '/conf/zabbix.conf.php';
++	const CONFIG_FILE_PATH = '/etc/zabbix/web/zabbix.conf.php';
+ 
+ 	private static $supported_db_types = [
+ 		ZBX_DB_DB2 => true,
+Only in zabbix-3.0.24/frontends/php/include/classes/core: CConfigFile.php.backup-config
+diff -rup zabbix-3.0.24-orig/frontends/php/include/classes/core/ZBase.php zabbix-3.0.24/frontends/php/include/classes/core/ZBase.php
+--- zabbix-3.0.24-orig/frontends/php/include/classes/core/ZBase.php	2018-11-26 11:04:52.000000000 +0100
++++ zabbix-3.0.24/frontends/php/include/classes/core/ZBase.php	2018-11-27 16:52:34.627133920 +0100
+@@ -104,7 +104,7 @@ class ZBase {
+ 		require_once $this->getRootDir().'/include/ident.inc.php';
+ 		require_once $this->getRootDir().'/include/images.inc.php';
+ 		require_once $this->getRootDir().'/include/items.inc.php';
+-		require_once $this->getRootDir().'/include/maintenances.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 		require_once $this->getRootDir().'/include/maps.inc.php';
+ 		require_once $this->getRootDir().'/include/media.inc.php';
+ 		require_once $this->getRootDir().'/include/services.inc.php';
+@@ -266,7 +266,7 @@ class ZBase {
+ 	 * @throws Exception
+ 	 */
+ 	protected function setMaintenanceMode() {
+-		require_once $this->getRootDir().'/conf/maintenance.inc.php';
++		require_once '/etc/zabbix/web/maintenance.inc.php';
+ 
+ 		if (defined('ZBX_DENY_GUI_ACCESS')) {
+ 			$user_ip = (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR']))
+@@ -282,7 +282,7 @@ class ZBase {
+ 	 * Load zabbix config file.
+ 	 */
+ 	protected function loadConfigFile() {
+-		$configFile = $this->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$configFile = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($configFile);
+ 		$this->config = $config->load();
+ 	}
+Only in zabbix-3.0.24/frontends/php/include/classes/core: ZBase.php.backup-config
+diff -rup zabbix-3.0.24-orig/frontends/php/include/classes/setup/CSetupWizard.php zabbix-3.0.24/frontends/php/include/classes/setup/CSetupWizard.php
+--- zabbix-3.0.24-orig/frontends/php/include/classes/setup/CSetupWizard.php	2018-11-26 11:04:52.000000000 +0100
++++ zabbix-3.0.24/frontends/php/include/classes/setup/CSetupWizard.php	2018-11-27 16:52:34.627133920 +0100
+@@ -348,7 +348,7 @@ class CSetupWizard extends CForm {
+ 	function stage5() {
+ 		$this->setConfig('ZBX_CONFIG_FILE_CORRECT', true);
+ 
+-		$config_file_name = Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH;
++		$config_file_name = CConfigFile::CONFIG_FILE_PATH;
+ 		$config = new CConfigFile($config_file_name);
+ 		$config->config = [
+ 			'DB' => [
+@@ -517,7 +517,7 @@ class CSetupWizard extends CForm {
+ 				// make zabbix.conf.php downloadable
+ 				header('Content-Type: application/x-httpd-php');
+ 				header('Content-Disposition: attachment; filename="'.basename(CConfigFile::CONFIG_FILE_PATH).'"');
+-				$config = new CConfigFile(Z::getInstance()->getRootDir().CConfigFile::CONFIG_FILE_PATH);
++				$config = new CConfigFile(CConfigFile::CONFIG_FILE_PATH);
+ 				$config->config = [
+ 					'DB' => [
+ 						'TYPE' => $this->getConfig('DB_TYPE'),
