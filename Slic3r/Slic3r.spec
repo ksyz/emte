@@ -1,10 +1,10 @@
 %global curdatetime %(date +%%Y%%m%%d%%H%%M%%S)
-%global commit0  f487129c7059e72b07a8179f1b8968b3a361739c
+%global commit0  86a728b39bbba95e844e7b2b7513c43239471327
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 
 Name:           slic3r
-Version:        1.3.0
-Release:        3.%{shortcommit0}%{?dist}
+Version:        1.3.1
+Release:        1.%{shortcommit0}%{?dist}
 Summary:        G-code generator for 3D printers (RepRap, Makerbot, Ultimaker etc.)
 License:        AGPLv3 and CC-BY
 # Images are CC-BY, code is AGPLv3

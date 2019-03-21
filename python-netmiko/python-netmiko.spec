@@ -5,13 +5,14 @@
 %global sum Multi-vendor library to simplify Paramiko SSH connections to network devices
 
 Name:           python-%{srcname}
-Version:        2.2.2
-Release:        5%{?dist}
+Version:        2.3.3
+Release:        2%{?dist}
 Summary:        %{sum}
 
 License:        MIT and ASL 2.0
 URL:            https://pypi.org/project/%{srcname}
 Source0:        https://files.pythonhosted.org/packages/source/n/%{srcname}/%{srcname}-%{version}.tar.gz
+Patch0:			distutils-compat.patch
 
 BuildArch:      noarch
 BuildRequires:	python-rpm-macros
@@ -33,12 +34,24 @@ Requires:       python2-scp >= 0.10.0
 Requires:       PyYAML
 Requires:       python2-pyserial
 Requires:       python2-textfsm
+Requires:       python2-enum34
+
+%if 0%{?fedora}
+Requires:       python2-ipaddress
+BuildRequires:  python2-ipaddress
+%else
+Requires:       python-ipaddress
+BuildRequires:  python-ipaddress
+%endif
+
+BuildRequires:  python2-setuptools
 # For import test, keep the same as requirements
 BuildRequires:  python2-paramiko
 BuildRequires:  python2-scp
 BuildRequires:  PyYAML
-BuildRequires:  python2-textfsm
 BuildRequires:  python2-pyserial
+BuildRequires:  python2-textfsm
+BuildRequires:  python2-enum34
 
 %{?python_provide:%python_provide python2-%{srcname}}
 
@@ -64,6 +77,7 @@ BuildRequires:  python%{python3_pkgversion}-scp
 BuildRequires:  python%{python3_pkgversion}-PyYAML
 BuildRequires:  python%{python3_pkgversion}-pyserial
 BuildRequires:  python%{python3_pkgversion}-textfsm
+BuildRequires:  python%{python3_pkgversion}-setuptools
 
 %{?python_provide:%python_provide python%{python3_pkgversion}-%{srcname}}
 
@@ -129,6 +143,15 @@ BuildRequires:  python%{python3_pkgversion}-textfsm
 
 
 %changelog
+* Wed Mar 20 2019 Michal Ingeli <mi@v3.sk> - 2.3.3-2
+- Added python-ipaddress BR compatible with el7
+
+* Mon Mar 11 2019 Dmitry Tantsur <divius.inside@gmail.com> - 2.3.3-1
+- Update to 2.3.3
+
+* Mon Feb 11 2019 Yatin Karel <ykarel@redhat.com> - 2.3.0-1
+- Update to 2.3.0
+
 * Wed Sep 26 2018 Michal Ingeli <mi@v3.sk> - 2.2.2-4
 - Fixed pyserial dependency
 

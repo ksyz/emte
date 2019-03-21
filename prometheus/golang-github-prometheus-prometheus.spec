@@ -43,12 +43,12 @@
 %global repo            prometheus
 %global provider_prefix %{provider}.%{provider_tld}/%{project}/%{repo}
 %global import_path     %{provider_prefix}
-%global commit          71af5e29e815795e9dd14742ee7725682fa14b7b
+%global commit          167a4b4e73a8eca8df648d2d2043e21bdb9a7449
 %global shortcommit     %(c=%{commit}; echo ${c:0:7})
 
 Name:           golang-%{provider}-%{project}-%{repo}
-Version:        2.3.2
-Release:        3%{?dist}
+Version:        2.4.3
+Release:        2%{?dist}
 Summary:        The Prometheus monitoring system and time series database
 License:        ASL 2.0
 URL:            https://%{provider_prefix}
@@ -347,20 +347,24 @@ gotest %{import_path}/notification
 gotest %{import_path}/config
 %endif
 
-%pre
+%pre -n prometheus
 getent group prometheus > /dev/null || groupadd -r %{default_group}
 getent passwd prometheus > /dev/null || \
     useradd -rg %{default_group} -d %{_sharedstatedir} -s /sbin/nologin \
             -c "Prometheus monitoring system" %{default_user}
-mkdir -p %{_sharedstatedir}/prometheus
 
-%post
+if [ $1 -gt 1 ] ; then
+	mkdir -p %{_sharedstatedir}/prometheus
+	chown %{default_user}:%{default_group} %{_sharedstatedir}/prometheus
+fi
+
+%post -n prometheus
 %systemd_post prometheus@.service
 
-%preun
+%preun -n prometheus
 %systemd_preun prometheus@.service
 
-%postun
+%postun -n prometheus
 %systemd_postun
 
 
@@ -388,6 +392,12 @@ mkdir -p %{_sharedstatedir}/prometheus
 %endif
 
 %changelog
+* Mon Dec  3 2018 Michal Ingeli <mi@v3.sk> - 2.4.3-2
+- Fixed rpm pre/post install scripts
+
+* Mon Dec  3 2018 Michal Ingeli <mi@v3.sk> - 2.4.3-1
+- New upstream release
+
 * Mon Aug 13 2018 Michal Ingeli <mi@v3.sk> - 2.3.2-3
 - Rebuild
 

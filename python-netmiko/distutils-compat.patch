@@ -1,0 +1,50 @@
+--- ./BUILD/netmiko-2.3.3/setup.py-orig	2019-03-20 10:53:59.517793314 +0100
++++ ./BUILD/netmiko-2.3.3/setup.py	2019-03-20 11:11:32.080634948 +0100
+@@ -2,7 +2,22 @@ from setuptools import setup
+ from setuptools import find_packages
+ import os
+ import re
++import sys
+ 
++requirements = [
++    "setuptools>=38.4.0",
++    "paramiko>=2.4.2",
++    "scp>=0.10.0",
++    "pyyaml",
++    "pyserial",
++    "textfsm",
++]
++
++# Cryptography library makes this necessary as older versions of PIP (PIP7 and less)
++# will not auto_install enum34 from extras_require.
++if sys.version_info < (3,):
++    requirements.append("enum34")
++    requirements.append("ipaddress")
+ 
+ with open("README.md", "r") as fs:
+     long_description = fs.read()
+@@ -32,7 +47,6 @@ setup(
+     version=find_version("netmiko", "__init__.py"),
+     description="Multi-vendor library to simplify Paramiko SSH connections to network devices",
+     long_description=long_description,
+-    long_description_content_type="text/markdown",
+     url="https://github.com/ktbyers/netmiko",
+     author="Kirk Byers",
+     author_email="ktbyers@twb-tech.com",
+@@ -47,15 +61,6 @@ setup(
+         "Programming Language :: Python :: 3.7",
+     ],
+     packages=find_packages(exclude=("test*",)),
+-    install_requires=[
+-        "setuptools>=38.4.0",
+-        "paramiko>=2.4.2",
+-        "scp>=0.10.0",
+-        "pyyaml",
+-        "pyserial",
+-        "textfsm",
+-        'enum34; python_version == "2.7"',
+-        'ipaddress; python_version == "2.7"',
+-    ],
++    install_requires=requirements,
+     extras_require={"test": ["pytest>=3.2.5"]},
+ )
