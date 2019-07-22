@@ -8,12 +8,12 @@
 %global srcname zabbix
 #%%global prerelease rc2
 %if ! 0%{?patchver}
-%define patchver 24
+%define patchver 28
 %endif
 
 Name:           zabbix
 Version:        3.0.%{patchver}
-Release:        2%{?prerelease:.%{prerelease}.1}%{?dist}
+Release:        1%{?prerelease:.%{prerelease}.1}%{?dist}
 Summary:        Open-source monitoring solution for your IT infrastructure
 
 License:        GPLv2+
@@ -796,6 +796,9 @@ fi
 %files web-pgsql
 
 %changelog
+* Mon Jul 22 2019 Michal Ingeli <mi@v3.sk> - 3.0.28-1
+- New upstream release 3.0.28
+
 * Thu Nov 29 2018 Michal Ingeli <mi@v3.sk> - 3.0.24-2
 - Fixed PidFile path
 
