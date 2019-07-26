@@ -6,7 +6,7 @@
 
 Name:		%{package_name}
 Version:	1.2.0
-Release:	1.%{shortcommit0}%{?dist}
+Release:	2.%{shortcommit0}%{?dist}
 Summary:	PostgreSQL plugin for prometheus data model
 
 License:	ASL 2.0
@@ -19,9 +19,9 @@ BuildRequires: gcc
 %if 0%{?rhel} > 7 || 0%{?fedora}
 
 %if 0%{?fedora} > 29
-Requires:	postgresql-devel = %(eval "rpm -q postgresql-devel --qf '%%{version}-%%{release}'")
+Requires:	postgresql-server-devel = %(eval "rpm -q postgresql-server-devel --qf '%%{version}-%%{release}'")
 BuildRequires: postgresql-server-devel >= 10
-BuildRequires: postgresql-devel >= 10
+BuildRequires: libpq-devel
 %else
 Requires:	postgresql-devel = %(eval "rpm -q postgresql-devel --qf '%%{version}-%%{release}'")
 BuildRequires: postgresql-devel >= 10
@@ -65,6 +65,9 @@ make install DESTDIR=%{buildroot}
 %endif
 
 %changelog
+
+* Fri Jul 26 2019 Michal Ingeli <mi@v3.sk> 1.2.0-2
+- Fixed fc30 BR
 
 * Fri Jul 26 2019 Michal Ingeli <mi@v3.sk> 1.2.0-1
 - New HEAD release
