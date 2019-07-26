@@ -56,6 +56,9 @@ make install DESTDIR=%{buildroot}
 
 %changelog
 
+* Fri Jul 26 2019 Michal Ingeli <mi@v3.sk> 0.2-3
+- Added Fedora>=29 build target compatibility
+
 * Wed Feb 20 2019 Michal Ingeli <mi@v3.sk> 0.2-2
 - Postgresql10 rebuild
 
