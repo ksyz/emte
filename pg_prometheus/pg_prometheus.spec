@@ -1,12 +1,12 @@
-%global commit0 c3bf029dfba982c4d4e8c5e327ce7c213ff10200
+%global commit0 606764598106b1851cdb724e807a7e2088578c13
 %global shortcommit0 %(c=%{commit0}; echo ${c:0:7})
 %global package_name pg_prometheus
 
 %global debug_package %{nil}
 
 Name:		%{package_name}
-Version:	0.2
-Release:	2.%{shortcommit0}%{?dist}
+Version:	1.2.0
+Release:	1.%{shortcommit0}%{?dist}
 Summary:	PostgreSQL plugin for prometheus data model
 
 License:	ASL 2.0
@@ -14,9 +14,19 @@ License:	ASL 2.0
 URL:		https://github.com/timescale/%{package_name}
 Source0:	https://github.com/timescale/%{package_name}/archive/%{commit0}.tar.gz#/%{package_name}-%{shortcommit0}.tar.gz
 
-%if 0%{?rhel} > 7 || 0%{?fedora} > 0
+BuildRequires: gcc
+
+%if 0%{?rhel} > 7 || 0%{?fedora}
+
+%if 0%{?fedora} > 29
 Requires:	postgresql-devel = %(eval "rpm -q postgresql-devel --qf '%%{version}-%%{release}'")
-BuildRequires: postgresql-devel
+BuildRequires: postgresql-server-devel >= 10
+BuildRequires: postgresql-devel >= 10
+%else
+Requires:	postgresql-devel = %(eval "rpm -q postgresql-devel --qf '%%{version}-%%{release}'")
+BuildRequires: postgresql-devel >= 10
+%endif
+
 %else
 # requires https://download.postgresql.org/pub/repos/yum/10/redhat/rhel-$releasever-$basearch
 Requires:	postgresql10-devel = %(eval "rpm -q postgresql10-devel --qf '%%{version}-%%{release}'")
@@ -55,6 +65,9 @@ make install DESTDIR=%{buildroot}
 %endif
 
 %changelog
+
+* Fri Jul 26 2019 Michal Ingeli <mi@v3.sk> 1.2.0-1
+- New HEAD release
 
 * Fri Jul 26 2019 Michal Ingeli <mi@v3.sk> 0.2-3
 - Added Fedora>=29 build target compatibility
